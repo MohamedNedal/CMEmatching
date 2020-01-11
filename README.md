@@ -15,4 +15,6 @@ semimanual_matching_RUN.m ----> is the main file (Run this).
 
 cme_icme_V4.m ----------------> is the matching function and it includes a prediction model based on G2001 model (Gopalswamy et al. 2001). 
 
+findTrend.m ------------------> is using the cell array "C" from the previous code to find the trends in solar wind data. 
+
 command_window.txt -----------> is the output report. 

@@ -16,7 +16,14 @@ is the solar wind data obtained from OMNI database.
 is the format of OMNI data. 
 
 ##### semimanual_matching_RUN.m 
-is the main file (Run this). 
+is the main code. 
+
+##### semimanual_matching_FcnRUN.m 
+is the main function (Run this). 
+
+Here is an example: 
+
+###### transtime = semimanual_matching_FcnRUN('omni_Example.txt','SOHOdata.xlsx'); 
 
 ##### cme_icme_V4.m 
 is the matching function and it includes a prediction model based on G2001 model (Gopalswamy et al. 2001). 

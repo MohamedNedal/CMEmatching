@@ -6,84 +6,15 @@ Importing and plotting data from OMNI Web Interface.
 OMNI provides interspersed data from various spacecrafts.
 There are 55 variables provided in the OMNI Data Import.
 """
-import math
 import numpy as np
 from pandas import read_excel, to_numeric
-# import datetime
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 import heliopy.data.omni as omni
 import os.path
+from necessary_functions import get_omni, magnetic_conversion, G2001
 import warnings
 warnings.filterwarnings('ignore')
-
-# In[]: --- 
-def magnetic_conversion(Bx, By, Bz):
-    '''
-    This function is to obtain the ('phi','theta') angles 
-    and the radial components of the IMF from its cartesian components. 
-
-    Parameters
-    ----------
-    Bx : pandas.core.series.Series 
-        The x-component of the interplanetary magnetic field. 
-        
-    By : pandas.core.series.Series 
-        The y-component of the interplanetary magnetic field. 
-        
-    Bz : pandas.core.series.Series 
-        The z-component of the interplanetary magnetic field. 
-
-    Returns
-    -------
-    phi : pandas.core.series.Series 
-        The angle between Bx and By (in rad. between +Pi and -Pi). 
-        
-    theta : pandas.core.series.Series 
-        The angle between Bz and xy plane (in rad. between +Pi and -Pi). 
-        
-    Br : pandas.core.series.Series 
-        The r-component (total) of the interplanetary magnetic field. 
-
-    '''
-    
-    Br = np.sqrt((Bx.values**2) + (By.values**2) + (Bz.values**2))
-        
-    theta, phi = [], []
-    
-    for i in range(0, len(Bx)):
-        
-        theta_rad = math.acos(Bz.values[i]/Br[i])        # returns the angle in radians 
-        phi_rad = math.atan2(By.values[i], Bx.values[i]) # returns the angle in radians 
-        
-        theta_deg = math.degrees(theta_rad) # returns the angle in degrees 
-        phi_deg = math.degrees(phi_rad)     # returns the angle in degrees 
-        
-        theta.append(theta_deg) 
-        phi.append(phi_deg) 
-    
-    theta = np.array(theta).astype('float32')
-    phi = np.array(phi).astype('float32')
-
-    return phi, theta, Br
-
-# In[]: --- 
-[phi, theta, Br] = magnetic_conversion(data['BX_GSE'], data['BY_GSM'], data['BZ_GSM'])
-
-data.insert(15, 'Br', Br)
-data.insert(16, 'phi', phi)
-data.insert(17, 'theta', theta)
-
-# In[]: --- 
-fig, ax = plt.subplots(1, 1, figsize=(15,3), dpi=300, sharex=True)
-ax.plot(data['phi'].loc['2013-01-17':'2013-01-20'], label='phi')
-ax.plot(data['theta'].loc['2013-01-17':'2013-01-20'], label='theta')
-ax.legend(loc='upper right', frameon=False, prop={'size': 10})
-ax.set_xlim(['2013-01-17', '2013-01-21'])
-plt.xlabel('Date')
-plt.ylabel('Angle (degrees)')
-fig.tight_layout()
-plt.show()
 
 # In[]: Establishing the output folder 
 save_path = 'D:/Study/Academic/Research/Master Degree/Master Work/Software/Codes/Python/Heliopy Examples/auto_examples_python/'
@@ -92,281 +23,86 @@ try:
 except OSError as error:
     print(error)
 
-# In[]: --- 
-def get_omni(start_datetime, end_datetime):
-    '''
-    This function to get OMNI data and plot it, for CME-ICME matching. 
-    
-    Type: High Resolution OMNI (HRO) 
-    Source: https://cdaweb.gsfc.nasa.gov/pub/data/omni/omni_cdaweb/ 
-    Decsribtion: https://omniweb.gsfc.nasa.gov/html/HROdocum.html 
-    
-    Parameters
-    ----------
-    start_datetime : datetime object
-        The format is 'yyyy,m,d,H,M,S'.
-        
-    end_datetime : datetime object
-        The format is 'yyyy,m,d,H,M,S'.
-
-    Returns
-    -------
-    Dataframe of the OMNI data within that period. 
-
-    '''
-    
-    omni_data = omni.hro2_1min(start_datetime, end_datetime)
-    data = omni_data.data
-    
-    # Consider only these columns  
-    fdata = data.filter(data[['F',
-                              'BX_GSE',
-                              'BY_GSM',
-                              'BZ_GSM',
-                              'flow_speed',
-                              'proton_density',
-                              'Beta',
-                              'Pressure',
-                              'SYM_H']])
-    
-    # Get a list of columns names of Filtered data 
-    print('\nFiltered columns are:\n', *fdata.columns, sep='\n')
-    
-    return fdata
-
 # In[]: Define the duration (year, month day, hour, minute, second) 
-starttime = datetime(2013, 1, 17, 0, 0, 0)
-endtime = datetime(2013, 1, 20, 23, 59, 59)
+# starttime = datetime(2013, 1, 17, 0, 0, 0)
+# endtime = datetime(2013, 1, 20, 23, 59, 59)
 
-# test 
-# >>> ADJUST THE CODE TO WORK ON THIS MODULE 
-omni_raw = omni.h0_mrg1hr(starttime, endtime)
-data = omni_raw.data
-# ---------------------------------------------------------- 
-# # High Resolution OMNI (HRO)
-# # Source: https://cdaweb.gsfc.nasa.gov/pub/data/omni/omni_cdaweb/ 
-# # Decsribtion: https://omniweb.gsfc.nasa.gov/html/HROdocum.html 
-omni_data = omni.hro2_1min(starttime, endtime)
-data = omni_data.data
-
-# Get a list of columns names of Raw data 
-print('\nRaw columns are:\n', *omni_data.columns, sep= '\n')
-
-# # Leave these columns only 
-# fdata = data.filter(data[['F',
-#                           'BX_GSE',
-#                           'BY_GSM',
-#                           'BZ_GSM',
-#                           'flow_speed',
-#                           'proton_density',
-#                           'Beta',
-#                           'Pressure',
-#                           'SYM_H']])
-
-# # Get a list of columns names of Filtered data 
-# print('\nFiltered columns are:\n', *fdata.columns, sep='\n')
-# labels = fdata.columns.values.tolist()
-
-# In[]: Plotting 
-# # Assign a threshold of the Dst (nT) to look for geomagnetic storms 
-# threshold = -17
-# print('\nDefine timestamps where Dst <', threshold, 'nT')
-
-# fig, axs = plt.subplots(7, 1, figsize=(15,10), dpi=100, sharex=True)
-# axs[0].plot(fdata['F'], label='Avg Mag Field')
-
-# axs[1].plot(fdata['BX_GSE'], label='Bx GSE')
-# axs[1].plot(fdata['BY_GSM'], label='By GSM')
-# axs[1].plot(fdata['BZ_GSM'], label='Bz GSM')
-
-# axs[2].plot(fdata['flow_speed'], label='Flow Speed')
-
-# axs[3].plot(fdata['proton_density'], label='Proton Density')
-# axs[4].plot(fdata['Pressure'], label='Pressure')
-# axs[5].plot(fdata['Beta'], label='Beta')
-# axs[6].plot(fdata['SYM_H'], label='SYM-H')
-
-# # Find Geomagnetic Storms in Data 
-# for i in range(1, len(fdata)):
-#     if fdata['SYM_H'][i] < threshold:
-
-#         axs[0].axvline(fdata['F'].index[i], color='tomato', alpha=0.1, linewidth=1, linestyle='--')
-#         axs[0].axvspan(fdata['F'].index[i-1], fdata['F'].index[i], facecolor='#FFCC66', alpha=0.7)
-
-#         axs[1].axvline(fdata['BX_GSE'].index[i], color='tomato', alpha=0.1, linewidth=1, linestyle='--')
-#         axs[1].axvspan(fdata['BX_GSE'].index[i-1], fdata['BX_GSE'].index[i], facecolor='#FFCC66', alpha=0.7)
-
-#         axs[2].axvline(fdata['flow_speed'].index[i], color='tomato', alpha=0.1, linewidth=1, linestyle='--')
-#         axs[2].axvspan(fdata['flow_speed'].index[i-1], fdata['flow_speed'].index[i], facecolor='#FFCC66', alpha=0.7)
-
-#         axs[3].axvline(fdata['proton_density'].index[i], color='tomato', alpha=0.1, linewidth=1, linestyle='--')
-#         axs[3].axvspan(fdata['proton_density'].index[i-1], fdata['proton_density'].index[i], facecolor='#FFCC66', alpha=0.7)
-
-#         axs[4].axvline(fdata['Pressure'].index[i], color='tomato', alpha=0.1, linewidth=1, linestyle='--')
-#         axs[4].axvspan(fdata['Pressure'].index[i-1], fdata['Pressure'].index[i], facecolor='#FFCC66', alpha=0.7)
-
-#         axs[5].axvline(fdata['Beta'].index[i], color='tomato', alpha=0.1, linewidth=1, linestyle='--')
-#         axs[5].axvspan(fdata['Beta'].index[i-1], fdata['Beta'].index[i], facecolor='#FFCC66', alpha=0.7)        
-        
-#         axs[6].axvline(fdata['SYM_H'].index[i], color='tomato', alpha=0.1, linewidth=1, linestyle='--')
-#         axs[6].axvspan(fdata['SYM_H'].index[i-1], fdata['SYM_H'].index[i], facecolor='#FFCC66', alpha=0.7)
-
-#         # print('Value:', fdata['SYM_H'][i], 'at', 'Index:', fdata.index[fdata['SYM_H'][i]])
-
-# for ax in axs:
-#     ax.legend(loc='upper right', frameon=False, prop={'size': 10})
-#     ax.set_xlim([starttime, endtime])
-#     # ax.grid()
-# plt.xlabel('Date')
-# fig.tight_layout()
-
-# # Select all the rows which satisfies the criteria 
-# # convert the collection of index labels to list 
-# Index_label = fdata[fdata['SYM_H'] < threshold].index.tolist()
-
-# print('\nNaNs?', fdata.isnull().values.any())
-
-# sta = str(starttime.year)+str(starttime.month)+str(starttime.day)+str(starttime.hour)+str(starttime.minute)+str(starttime.second)
-# end = str(endtime.year)+str(endtime.month)+str(endtime.day)+str(endtime.hour)+str(endtime.minute)+str(endtime.second)
-# plt.savefig(os.path.join(save_path, 'Output_plots' + '/', 'OMNI_Data_'+sta+'--'+end+'.png'))
-
-# In[]: Finding the BIG rate of change 
-# def find_change(current_point, previous_point):
-#     if current_point == previous_point:
-#         return 0
-#     try:
-#         ROC = (abs(current_point - previous_point) / previous_point) * 100.0
-#         if ROC > 30:
-#             f, ax = plt.subplots(figsize=(15,3), dpi=100)
-#             ax.plot(fdata['Pressure'], label='Pressure')
-#             ax.legend(loc='upper right', frameon=False, prop={'size': 10})
-#             ax.set_xlim([starttime, endtime])
-#             ax.xlabel('Date')
-#             ax.ylabel('Pressure (nPa)')
-#             plt.show()
-#         return ax
-#     except ZeroDivisionError:
-#         return float('inf')
-
-# In[]: Finding the locations of BIG rate of change 
-# ROC_timestamps = []
-# for i in range(1, len(fdata)):
-#     ROC = (abs(fdata['Pressure'][i] - fdata['Pressure'][i-1]) / fdata['Pressure'][i-1]) * 100.0
-#     if ROC > 80:
-#         ROC_timestamps.append(fdata['Pressure'].index[i])
-
-# # Plotting ROC >30% on the data 
-# fig, ax = plt.subplots(1, 1, figsize=(15,3), dpi=100)
-# ax.plot(fdata['Pressure'], label='Pressure')
-# for i in ROC_timestamps:
-#     ax.axvline(x=i, label='ROC >30%', color='tomato', alpha=0.7, linewidth=1, linestyle='--')
-
-# ax.set_xlim([starttime, endtime])
-# plt.xlabel('Date')
-# plt.ylabel('Pressure (nPa)')    
-# plt.show()
+# omni_raw = omni.h0_mrg1hr(starttime, endtime)
+# data = omni_raw.data
+# print('\nOMNI columns are:\n', *data.columns, sep='\n')
 
 # In[]: --- 
 # ======================== IMPORTING CME DATASET FROM SOHO/LASCO CATALOGUE ======================== 
 
 # In[]: Import CME data 
-soho = read_excel('CMEs_SOHO.xlsx', sheet_name='CMEs_SOHO')
+# soho = read_excel('CMEs_SOHO.xlsx', sheet_name='CMEs_SOHO')
 
 # In[]: --- 
-new_datetime = []
-uncertain_Accel = []
-for i in range(0, len(soho)):
-    try:
-        # Fix the date-time column 
-        soho['Date'][i] = soho['Date'][i].date()
-        new_datetime.append(datetime.combine(soho.Date[i], soho.Time[i]))
-        # Remove the '*' character in 'Accel' column 
-        if soho['Accel'][i][-1] == '*':
-            # uncertain_Accel.append(soho.index[i])
-            uncertain_Accel.append(new_datetime[i])
-            soho['Accel'][i] = soho['Accel'][i][:-1]
-    except:
-        pass
+# new_datetime = []
+# uncertain_Accel = []
+# for i in range(0, len(soho)):
+#     try:
+#         # Fix the date-time column 
+#         soho['Date'][i] = soho['Date'][i].date()
+#         new_datetime.append(datetime.combine(soho.Date[i], soho.Time[i]))
+#         # Remove the '*' character in 'Accel' column 
+#         if soho['Accel'][i][-1] == '*':
+#             # uncertain_Accel.append(soho.index[i])
+#             uncertain_Accel.append(new_datetime[i])
+#             soho['Accel'][i] = soho['Accel'][i][:-1]
+#     except:
+#         pass
 
-soho.insert(0, 'Datetime', new_datetime)
+# soho.insert(0, 'Datetime', new_datetime)
 
 # In[]: Selecting rows based on conditions 
-print('\nSOHO columns are:\n', *soho.columns, sep='\n')
+# print('\nSOHO columns are:\n', *soho.columns, sep='\n')
 
-# Take these columns as energy channels 
-soho = soho.drop(columns={'Date','Time','CPA','Mass','KE'})
-# soho = soho.filter(soho[['Date','Time','CPA','Width']])
+# # Take these columns as energy channels 
+# soho = soho.drop(columns={'Date','Time','CPA','Mass','KE'})
+# # soho = soho.filter(soho[['Date','Time','CPA','Width']])
 
-print('\nFinal SOHO columns are:\n', *soho.columns, sep='\n')
+# print('\nFinal SOHO columns are:\n', *soho.columns, sep='\n')
 
 # In[]: Clean data 
-filtered_soho = soho.drop(soho[soho.values == '----'].index)
+# filtered_soho = soho.drop(soho[soho.values == '----'].index)
 # filtered_soho = soho.drop(soho.values == '----')
 
 # In[]: Converting columns' types 
 
-print(filtered_soho.dtypes)
+# print(filtered_soho.dtypes)
 
-filtered_soho['Linear_Speed'] = to_numeric(filtered_soho['Linear_Speed'], errors='coerce')
-filtered_soho['Linear_Speed'] = filtered_soho['Linear_Speed'].astype(float)
-filtered_soho['Initial_Speed'] = to_numeric(filtered_soho['Initial_Speed'], errors='coerce')
-filtered_soho['Initial_Speed'] = filtered_soho['Initial_Speed'].astype(float)
-filtered_soho['Final_Speed'] = to_numeric(filtered_soho['Final_Speed'], errors='coerce')
-filtered_soho['Final_Speed'] = filtered_soho['Final_Speed'].astype(float)
-filtered_soho['Speed_20Rs'] = to_numeric(filtered_soho['Speed_20Rs'], errors='coerce')
-filtered_soho['Speed_20Rs'] = filtered_soho['Speed_20Rs'].astype(float)
-filtered_soho['Accel'] = to_numeric(filtered_soho['Accel'], errors='coerce')
-filtered_soho['Width'] = filtered_soho['Width'].astype(float)
-filtered_soho['MPA'] = filtered_soho['MPA'].astype(float)
+# filtered_soho['Linear_Speed'] = to_numeric(filtered_soho['Linear_Speed'], errors='coerce')
+# filtered_soho['Linear_Speed'] = filtered_soho['Linear_Speed'].astype(float)
+# filtered_soho['Initial_Speed'] = to_numeric(filtered_soho['Initial_Speed'], errors='coerce')
+# filtered_soho['Initial_Speed'] = filtered_soho['Initial_Speed'].astype(float)
+# filtered_soho['Final_Speed'] = to_numeric(filtered_soho['Final_Speed'], errors='coerce')
+# filtered_soho['Final_Speed'] = filtered_soho['Final_Speed'].astype(float)
+# filtered_soho['Speed_20Rs'] = to_numeric(filtered_soho['Speed_20Rs'], errors='coerce')
+# filtered_soho['Speed_20Rs'] = filtered_soho['Speed_20Rs'].astype(float)
+# filtered_soho['Accel'] = to_numeric(filtered_soho['Accel'], errors='coerce')
+# filtered_soho['Width'] = filtered_soho['Width'].astype(float)
+# filtered_soho['MPA'] = filtered_soho['MPA'].astype(float)
 
-print(filtered_soho.dtypes)
+# print(filtered_soho.dtypes)
 
 # In[]: --- 
-# Filter the data 
-filtered_soho_lv1 = filtered_soho[(filtered_soho['Linear_Speed'].values >= 700) & (filtered_soho['Width'].values >= 120)]
+# # Filter the data 
+# filtered_soho_lv1 = filtered_soho[(filtered_soho['Linear_Speed'].values >= 700) & (filtered_soho['Width'].values >= 120)]
 
-# Randomly select number of rows 
-num_rand_samples = 40
-sample = filtered_soho_lv1.sample(n=num_rand_samples)
+# # Randomly select number of rows 
+# num_rand_samples = 40
+# sample = filtered_soho_lv1.sample(n=num_rand_samples)
 
-sample = sample.set_index('Datetime')
+# sample = sample.set_index('Datetime')
 
 # sample.to_excel('Random_'+str(num_rand_samples)+'_CMEs.xlsx') # already done 
 
 # In[]: --- 
 # ======================== INTEGRATE CME WITH OMNI DATA ============================== 
 
-# In[]: G2001 Model -- it can be used in a for-loop for many events 
-def G2001(CME_datetime, CME_speed):
-    '''
-    This function is to calculate the estimate transit time of CMEs, from Gopalswamy et al. (2001). 
-
-    Parameters
-    ----------
-    CME_datetime : datetime object 
-        The format is 'yyyy,m,d,H,M,S'. 
-    
-    CME_speed : 
-        float number, in 'km/s'. 
-
-    Returns
-    -------
-    Arrival time of the CME (datetime object). 
-
-    '''
-    AU = 149599999.99979659915  # Sun-Earth distance in km 
-    d = 0.76 * AU               # cessation distance in km 
-    
-    a_calculated = (-10**-3) * ((0.0054 * CME_speed) - 2.2) # in km/s**2 
-    squareRoot = np.sqrt((CME_speed**2) + (2*a_calculated*d))
-    
-    A = (-CME_speed + squareRoot) / a_calculated
-    B = (AU - d) / squareRoot
-    C = (A + B) / 60
-    
-    arrival_datetime = CME_datetime + timedelta(minutes=C)
-    
-    return arrival_datetime
+# In[]: IMPORT THE LIST OF RANDOM CME EVENTS 
+sample = read_excel('Random_40_CMEs.xlsx', index_col='Datetime')
 
 # In[]: --- Try to build a JSON file structure with these info for all events --- 
 print('Predicting the transit time of the CME using G2001 model .. \n')
@@ -404,47 +140,48 @@ end_datetime = datetime(end_window.year,
 
 omni_data = get_omni(start_datetime, end_datetime)
 
-# # Get a list of columns names of Raw data 
-# print('\nRaw columns are:\n', *omni_data.columns, sep= '\n')
+# In[]: --- PLOT THE SIGMA VALUE --- 
+plt.figure(figsize=(15,3))
+plt.plot(omni_data.index, omni_data['ABS_B1800'], label='B_abs')
 
-# # Leave these columns only 
-# fdata = data.filter(data[['F',
-#                           'BX_GSE',
-#                           'BY_GSM',
-#                           'BZ_GSM',
-#                           'flow_speed',
-#                           'proton_density',
-#                           'Beta',
-#                           'Pressure',
-#                           'SYM_H']])
+plt.fill_between(omni_data.index, 
+                 omni_data['ABS_B1800']-omni_data['SIGMA$ABS_B1800'], 
+                 omni_data['ABS_B1800']+omni_data['SIGMA$ABS_B1800'], 
+                 facecolor='grey', alpha=0.15, label='Sigma')
 
-# # Get a list of columns names of Filtered data 
-# print('\nFiltered columns are:\n', *fdata.columns, sep='\n')
-# labels = fdata.columns.values.tolist()
-
-# In[]: --- 
-plt.figure(figsize=(15,3), dpi=300)
-omni_data['SYM_H'].plot()
-plt.xlabel('Date')
-plt.ylabel('Dst (nT)')
+plt.xlabel('Datetime')
+plt.ylabel(r'$B_{ABS}$ $(nT)$')
+plt.legend(frameon=False)
+plt.xlim([omni_data.index[0], omni_data.index[-1]])
 plt.show()
 
 # In[]: --- 
 # Assign a threshold of the Dst (nT) to look for geomagnetic storms 
-threshold = np.average(omni_data['SYM_H'])
+offset = 5
+threshold = np.average(omni_data['DST1800'] - offset)
 
 print('\nDefine timestamps where Dst <', threshold, 'nT')
 
+# Select all the rows which satisfies the criteria 
+# convert the collection of index labels to list 
+Index_label_Dst = omni_data[omni_data['DST1800'] <= threshold].index.tolist()
+
 fig, ax = plt.subplots(1, 1, figsize=(15,3), dpi=300)
-ax.plot(omni_data['SYM_H'], label='SYM-H')
+ax.plot(omni_data['DST1800'], label='DST')
 
 # Find Geomagnetic Storms in Data 
 for i in range(1, len(omni_data)):
-    if omni_data['SYM_H'][i] <= threshold:
-        ax.axvline(omni_data['SYM_H'].index[i], color='tomato', alpha=0.1, linewidth=1, linestyle='--')
-        ax.axvspan(omni_data['SYM_H'].index[i-1], omni_data['SYM_H'].index[i], facecolor='#FFCC66', alpha=0.7)
+    if omni_data['DST1800'][i] <= threshold:
+        ax.axvline(omni_data['DST1800'].index[i], color='tomato', alpha=0.1, linewidth=1, linestyle='--')
+        ax.axvspan(omni_data['DST1800'].index[i-1], omni_data['DST1800'].index[i], facecolor='#FFCC66', alpha=0.7)
 
 ax.axvline(arrival_datetime, label='G2001', color='green', alpha=0.7, linewidth=3, linestyle='--')
+
+# Find the local min Dst value within the window of 'Index_label_Dst' 
+min_Dst_window = min(omni_data['DST1800'].loc[Index_label_Dst[0]:Index_label_Dst[-1]])
+
+ax.axvline(omni_data[omni_data['DST1800']==min_Dst_window].index, 
+            label='Min(Dst)', color='red', alpha=0.7, linewidth=3, linestyle='--')
 
 ax.legend(loc='upper right', frameon=False, prop={'size': 10})
 ax.set_xlim([omni_data.index[0], omni_data.index[-1]])
@@ -452,17 +189,10 @@ plt.xlabel('Date')
 plt.ylabel('Dst (nT)')
 fig.tight_layout()
 
-# Select all the rows which satisfies the criteria 
-# convert the collection of index labels to list 
-Index_label_Dst = omni_data[omni_data['SYM_H'] <= threshold].index.tolist()
-
 print('\nNaNs?', omni_data.isnull().values.any())
 
-# ============================================= 
-# >>> APPLY STEP NO. 6 FROM MY NOTEBOOK <<< 
-# ================================================ 
-# >>> APPEND (Br, phi, theta) IN THE DATASET <<< 
-# ================================================== 
+# In[]: --- >>> APPLY STEP NO. 6 FROM MY NOTEBOOK <<< 
+# ===================================================== 
 
 fig, axs = plt.subplots(7, 1, figsize=(15,10), dpi=300, sharex=True)
 
@@ -489,7 +219,7 @@ axs[5].set_ylabel('Plasma\nBeta')
 axs[6].plot(omni_data['SYM_H'], label='SYM-H')
 axs[6].set_ylabel('Dst (nT)')
 
-# Find Geomagnetic Storms in Data 
+# Find Geomagnetic Storms in Data --- ADJUST THE COLUMNS' LABELS --- <<< 
 for i in range(1, len(omni_data)):
     if omni_data['SYM_H'][i] < threshold:
 
@@ -586,6 +316,7 @@ plt.savefig(os.path.join(save_path, 'Output_plots' + '/', 'OMNI_Data_'+st+'--'+e
 
 
 
+
 # In[] --- 
 
 
@@ -593,8 +324,23 @@ plt.savefig(os.path.join(save_path, 'Output_plots' + '/', 'OMNI_Data_'+st+'--'+e
 
 
 
+# In[]: --- 
+# fig, ax = plt.subplots(1, 1, figsize=(15,3), dpi=300, sharex=True)
+# ax.plot(data['phi'].loc['2013-01-17':'2013-01-20'], label='phi')
+# ax.plot(data['theta'].loc['2013-01-17':'2013-01-20'], label='theta')
+# ax.legend(loc='upper right', frameon=False, prop={'size': 10})
+# ax.set_xlim(['2013-01-17', '2013-01-21'])
+# plt.xlabel('Date')
+# plt.ylabel('Angle (degrees)')
+# fig.tight_layout()
+# plt.show()
 
+# In[]: --- 
+# [phi, theta, Br] = magnetic_conversion(data['BX_GSE'], data['BY_GSM'], data['BZ_GSM'])
 
+# data.insert(15, 'Br', Br)
+# data.insert(16, 'phi', phi)
+# data.insert(17, 'theta', theta)
 
 # In[] --- 
 # TEST 

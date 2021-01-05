@@ -54,8 +54,8 @@ def get_omni(start_datetime, end_datetime):
         'T1800', # 1AU IP Plasma Temperature (deg K) 
         'N1800', # 1AU IP Ion number density (per cc) 
         'V1800', # 1AU IP plasma flow speed (km/s) 
-        'PHI-V1800', # 1AU IP plasma flow direction longitude (deg), phi 
-        'THETA-V1800', # 1AU IP plasma flow direction latitude (deg), theta 
+        'PHI$V1800', # 1AU IP plasma flow direction longitude (deg), phi 
+        'THETA$V1800', # 1AU IP plasma flow direction latitude (deg), theta 
         'Ratio1800', # 1AU IP Alpha/proton ratio 
         'Pressure1800', # 1AU IP Flow pressure (nPa) 
         'E1800', # 1AU IP Electric Field (mV/m) 
@@ -65,12 +65,12 @@ def get_omni(start_datetime, end_datetime):
         
         # --- EERGETIC PARTICLES --- 
         
-        'PR-FLX_11800', # 1AU Proton flux > 1 MeV, 1/(SQcm-ster-s) 
-        'PR-FLX_21800', # 1AU Proton flux >2 MeV (1/(SQcm-ster-s)) [PR-FLX_21800]
-        'PR-FLX_41800', # 1AU Proton flux >4 MeV (1/(SQcm-ster-s)) 
-        'PR-FLX_101800', # 1AU Proton flux >10 MeV (1/(SQcm-ster-s)) 
-        'PR-FLX_301800', # 1AU Proton flux >30 MeV (1/(SQcm-ster-s)) 
-        'PR-FLX_601800', # 1AU Proton flux >60 MeV (1/(SQcm-ster-s)) 
+        'PR$FLX_11800', # 1AU Proton flux > 1 MeV, 1/(SQcm-ster-s) 
+        'PR$FLX_21800', # 1AU Proton flux >2 MeV (1/(SQcm-ster-s)) [PR-FLX_21800]
+        'PR$FLX_41800', # 1AU Proton flux >4 MeV (1/(SQcm-ster-s)) 
+        'PR$FLX_101800', # 1AU Proton flux >10 MeV (1/(SQcm-ster-s)) 
+        'PR$FLX_301800', # 1AU Proton flux >30 MeV (1/(SQcm-ster-s)) 
+        'PR$FLX_601800', # 1AU Proton flux >60 MeV (1/(SQcm-ster-s)) 
         
         'F10_INDEX1800', # F10.7 - Daily 10.7 cm solar radio flux, units: 10**(-22) Joules/second/square-meter/Hertz, from NGDC 
         'DST1800', # Dst - 1-hour Dst index from WDC Kyoto 
@@ -78,20 +78,20 @@ def get_omni(start_datetime, end_datetime):
         'Proton_QI1800', # Solar wind (magnetic energy density)/(kinetic energy density) 
         
         # --- SIGMA VALUES --- 
-        'SIGMA-ABS_B1800', # RMS deviation of average B magnitude (nT)                               
-        'SIGMA-Bx1800', # RMS deviation Bx (nT), GSE 
-        'SIGMA-By1800', # RMS deviation By (nT), GSE 
-        'SIGMA-Bz1800', # RMS deviation Bz (nT), GSE 
-        'SIGMA-T1800', # RMS deviation of plasma temperature (deg k) 
-        'SIGMA-N1800', # RMS deviation of ion number density (per cc) 
-        'SIGMA-V1800', # RMS deviation in plasma flow velocity (km/s) 
-        'SIGMA-PHI-V1800', # RMS deviation in plasma flow direction longitude (deg), phi 
-        'SIGMA-THETA-V1800', # RMS deviation in plasma flow direction latitude (deg), theta 
-        'SIGMA-ratio1800' # RMS deviation alpha/proton ratio 
-                              ]])
+        'SIGMA$ABS_B1800', # RMS deviation of average B magnitude (nT)                               
+        'SIGMA$Bx1800', # RMS deviation Bx (nT), GSE 
+        'SIGMA$By1800', # RMS deviation By (nT), GSE 
+        'SIGMA$Bz1800', # RMS deviation Bz (nT), GSE 
+        'SIGMA$T1800', # RMS deviation of plasma temperature (deg k) 
+        'SIGMA$N1800', # RMS deviation of ion number density (per cc) 
+        'SIGMA$V1800', # RMS deviation in plasma flow velocity (km/s) 
+        'SIGMA$PHI$V1800', # RMS deviation in plasma flow direction longitude (deg), phi 
+        'SIGMA$THETA$V1800', # RMS deviation in plasma flow direction latitude (deg), theta 
+        'SIGMA$ratio1800' # RMS deviation alpha/proton ratio 
+        ]])
     
     # Get a list of columns names of Filtered data 
-    print('\nFiltered columns are:\n', *fdata.columns, sep='\n')
+    # print('\nFiltered columns are:\n', *fdata.columns, sep='\n')
     
     return fdata
 

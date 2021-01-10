@@ -1,10 +1,12 @@
+# -*- coding: utf-8 -*-
 """
 Plotting OMNI Data
 ==================
 
 Importing and plotting data from OMNI Web Interface.
 OMNI provides interspersed data from various spacecrafts.
-There are 55 variables provided in the OMNI Data Import.
+There are 55 variables provided in the OMNI Data Import. 
+
 """
 # import numpy as np
 from pandas import read_excel, DataFrame, Timestamp
@@ -23,20 +25,21 @@ except OSError as error:
     print(error)
 
 # In[]: IMPORT THE LIST OF RANDOM CME EVENTS 
-sample = read_excel('Random_40_CMEs.xlsx', index_col='Datetime')
+# sample = read_excel('Random_CMEs.xlsx', sheet_name='Sheet2', index_col='Datetime')
+sample = read_excel('Random_100_CMEs.xlsx', index_col='Datetime')
 
 # Create an empty table to be filled with the CME info and its estimated transit time 
 final_table = []
 
 # Try to build a JSON file structure with these info for all events 
-print('\nPredicting the transit time of the CMEs using the G2001 model .. \n')
+print('\nPredicting the transit time of the CMEs using the G2001 model\nwith mean error of:', 11.04, 'hours, according to Gopalswamy et al. 2001 .. \n')
 
 print('For more info about the G2001 model, check this paper:\nGopalswamy, N., Lara, A., Yashiro, S., Kaiser, M. L., and Howard,\nR. A.: Predicting the 1-AU arrival times of coronal mass ejections,\nJ. Geophys. Res., 106, 29 207, 2001a.\n')
 print('And this paper:\nOwens, M., & Cargill, P. (2004, January).\nPredictions of the arrival time of Coronal Mass Ejections at 1AU:\nan analysis of the causes of errors.\nIn Annales Geophysicae (Vol. 22, No. 2, pp. 661-671). Copernicus GmbH.\n')
-print('-------------------------------------------------------')
+print('=========================================================')
 
 # In[]: Drop rows (CME events) that have problems with their respective OMNI data 
-sample.drop([sample.index[4], sample.index[14]], inplace=True)
+# sample.drop([sample.index[4], sample.index[14]], inplace=True)
 
 # In[]: --- 
 # FINALIZE THE OUTPUT 
@@ -48,6 +51,11 @@ cols = cols.insert(len(cols)+1, 'est_ICME_datetime')
 
 final_table = DataFrame(columns=cols)
 
+# Assign a threshold of the Dst (nT) to look for geomagnetic storms 
+threshold = -40.0
+print('Define timestamps where Dst =<', round(threshold,2), 'nT')
+print('-------------------------------------------------------')
+
 for event_num in range(len(sample)):
         
     arrival_datetime = G2001(sample.index[event_num], sample.Linear_Speed[event_num])
@@ -58,8 +66,7 @@ for event_num in range(len(sample)):
     print('Estimated Transit time is: {} days, {} hours, {} minutes' .format(dt.components.days, 
                                                                           dt.components.hours, 
                                                                           dt.components.minutes))
-    print('with mean error of:', 11.04, ' hours')
-    print('-------------------------------------------------------\n')
+    print('-------------------------------------------------------')
     
     # ------------------------------------------------------ 
     start_window = arrival_datetime - timedelta(hours=11.04)
@@ -83,20 +90,20 @@ for event_num in range(len(sample)):
     
     # ------------------------------------------------------ 
     
-    # Assign a threshold of the Dst (nT) to look for geomagnetic storms 
-    threshold = -40
-    # Select all the rows which satisfies the criteria 
-    # Convert the collection of index labels to list 
+    ''' 
+    Select all the rows which satisfies the criteria, and 
+    Convert the collection of the index labels of those rows to list 
+    
+    ''' 
+    
     Index_label_Dst = omni_data[omni_data['DST1800'] <= threshold].index.tolist()
     
     if Index_label_Dst == []:
-        print('-------------------------------------------------------\n')
-        print('Index_label_Dst is empty')
-        print('-------------------------------------------------------\n')
+        print('No value of Dst-index =< ', threshold, ' is found\nwithin the specified time interval in OMNI data.')
+        print('Skip the analysis for the CME launched on:', sample.index[event_num])
+        print('-------------------------------------------------------')
     
     else:
-        print('Define timestamps where Dst =< ', round(threshold,2), 'nT')
-    
         if min(omni_data['DST1800']) <= threshold:
             
             fig, axs = plt.subplots(8, 1, figsize=(15,15), dpi=300, sharex=True)
@@ -182,32 +189,44 @@ for event_num in range(len(sample)):
                         plt.xlabel('Date')
                         fig.tight_layout()
                         
-                        st = str(omni_data.index[0].year)+str(omni_data.index[0].month)+str(omni_data.index[0].day)+str(omni_data.index[0].hour)+str(omni_data.index[0].minute)+str(omni_data.index[0].second)
-                        en = str(omni_data.index[-1].year)+str(omni_data.index[-1].month)+str(omni_data.index[-1].day)+str(omni_data.index[-1].hour)+str(omni_data.index[-1].minute)+str(omni_data.index[-1].second)
-                        plt.savefig(os.path.join(save_path, 'Output_plots' + '/', 'OMNI_Data_for_CME_No_'+str(event_num)+'_'+st+'-'+en+'.png'))
-                                            
-                        # APPEND THE OUTPUT TRANSIT TIME WITH THE CME INFO 
-                        est_trans_time = Index_label_Dst[dt_G2001_idxLabel.index(min(dt_G2001_idxLabel))] - sample.index[event_num]
-                        
-                        tran_time_hours = (est_trans_time.components.days * 24) + (est_trans_time.components.minutes / 60) + (est_trans_time.components.seconds / 3600)
-                        
-                        final_table = final_table.append({'CME_datetime': sample.index[event_num], 
-                                                          'Width': sample['Width'][event_num], 
-                                                          'Linear_Speed': sample['Linear_Speed'][event_num], 
-                                                          'Initial_Speed': sample['Initial_Speed'][event_num], 
-                                                          'Final_Speed': sample['Final_Speed'][event_num], 
-                                                          'Speed_20Rs': sample['Speed_20Rs'][event_num], 
-                                                          'Accel': sample['Accel'][event_num], 
-                                                          'MPA': sample['MPA'][event_num], 
-                                                          'Transit_time_hrs': tran_time_hours, 
-                                                          'est_ICME_datetime': est_trans_time}, ignore_index=True)
-                        
-                        Index_label_Dst, min_Dst_window = [], []
+            
+            st = str(omni_data.index[0].year)+str(omni_data.index[0].month)+str(omni_data.index[0].day)+str(omni_data.index[0].hour)+str(omni_data.index[0].minute)+str(omni_data.index[0].second)
+            en = str(omni_data.index[-1].year)+str(omni_data.index[-1].month)+str(omni_data.index[-1].day)+str(omni_data.index[-1].hour)+str(omni_data.index[-1].minute)+str(omni_data.index[-1].second)
+            plt.savefig(os.path.join(save_path, 'Output_plots' + '/', 'OMNI_Data_for_CME_No_'+str(event_num)+'_'+st+'-'+en+'.png'))
+
+
+
+            # APPEND THE OUTPUT TRANSIT TIME WITH THE CME INFO 
+            # >>> WHY final_table HAS REPEATED ROWS FOR THE SAME EVENT? <<< 
+            est_trans_time = Index_label_Dst[dt_G2001_idxLabel.index(min(dt_G2001_idxLabel))] - sample.index[event_num]
+            tran_time_hours = (est_trans_time.components.days * 24) + (est_trans_time.components.minutes / 60) + (est_trans_time.components.seconds / 3600)
+
+            final_table = final_table.append({'CME_datetime': sample.index[event_num], 
+                                              'Width': sample['Width'][event_num], 
+                                              'Linear_Speed': sample['Linear_Speed'][event_num], 
+                                              'Initial_Speed': sample['Initial_Speed'][event_num], 
+                                              'Final_Speed': sample['Final_Speed'][event_num], 
+                                              'Speed_20Rs': sample['Speed_20Rs'][event_num], 
+                                              'Accel': sample['Accel'][event_num], 
+                                              'MPA': sample['MPA'][event_num], 
+                                              'Transit_time_hrs': tran_time_hours, 
+                                              'est_ICME_datetime': est_trans_time}, ignore_index=True)
+                                
 
 
         else:
             print('The OMNI data from '+str(start_datetime)+' to '+str(end_datetime)+' has no Dst value below '+str(threshold)+' nT.')
             print('-------------------------------------------------------\n')
+
+
+# dropping duplicate values 
+# final_table2 = final_table
+# final_table2.drop_duplicates(keep=False,inplace=True)
+
+print('Final Report:\n===============')
+print('Total number of CMEs:', len(sample))
+print('Number of CMEs with Dst index =< -40 nT:', len(final_table))
+print('Number of skipped CMEs:', len(sample) - len(final_table))
 
 # In[]: PLOT SPEED VS TRANSIT TIME 
 plt.figure()

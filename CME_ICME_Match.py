@@ -106,7 +106,7 @@ for event_num in range(len(sample)):
     else:
         if min(omni_data['DST1800']) <= threshold:
             
-            fig, axs = plt.subplots(8, 1, figsize=(15,15), dpi=300, sharex=True)
+            fig, axs = plt.subplots(8, 1, figsize=(15,15), sharex=True) # dpi=300
             
             fig.suptitle('For CME event that is launched on: '+str(sample.index[event_num]))
             

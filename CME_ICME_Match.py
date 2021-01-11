@@ -17,6 +17,10 @@ from statistics import mean
 import warnings
 warnings.filterwarnings('ignore')
 
+# In[]: Print out the data directory path and their sizes 
+from heliopy.data import helper as heliohelper
+heliohelper.listdata()
+
 # In[]: Establishing the output folder 
 save_path = 'D:/Study/Academic/Research/Master Degree/Master Work/Software/Codes/Python/Heliopy Examples/auto_examples_python/'
 try:

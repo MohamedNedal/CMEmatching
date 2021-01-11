@@ -28,9 +28,9 @@ except OSError as error:
     print(error)
 
 # In[]: IMPORT THE LIST OF CME EVENTS 
-# sample = read_excel('Random_CMEs.xlsx', sheet_name='Sheet2', index_col='Datetime')
 date_columns = ['Shock_Date', 'Shock_Time', 'ICME_Time', 'CME_Date', 'CME_Time']
-sample = read_excel('List_from_Interplanetary shocks lacking type II radio bursts_paper.xlsx', sheet_name='Sheet1', parse_dates=date_columns)
+sample = read_excel('List_from_Interplanetary shocks lacking type II radio bursts_paper.xlsx', 
+                    sheet_name='Sheet1', parse_dates=date_columns)
 
 # formatting the datetimes 
 for i in range(len(sample)):
@@ -80,7 +80,9 @@ sample.to_excel('List_from_Interplanetary shocks lacking type II radio bursts_pa
 # In[]: Create an empty table to be filled with the CME info and its estimated transit time 
 final_table = []
 
-# Try to build a JSON file structure with these info for all events 
+print('\nFinding the ICMEs in OMNI data and match them with the CMEs from SOHO-LASCO')
+print('For more info about the method, check the paper:\nGopalswamy et al. (2010), Interplanetary shocks lacking type II radio bursts,\nThe Astrophysical Journal, 710(2), 1111.')
+
 print('\nPredicting the transit time of the CMEs using the G2001 model\nwith mean error of:', 11.04, 'hours, according to Gopalswamy et al. 2001 .. \n')
 
 print('For more info about the G2001 model, check this paper:\nGopalswamy, N., Lara, A., Yashiro, S., Kaiser, M. L., and Howard,\nR. A.: Predicting the 1-AU arrival times of coronal mass ejections,\nJ. Geophys. Res., 106, 29 207, 2001a.\n')
@@ -222,7 +224,7 @@ try:
 except KeyError as err:
     print(err)
 
-final_table.to_excel('Matched_List'+str(len(final_table))+'_CME-ICME_pairs.xlsx')
+final_table.to_excel('Matched_List_'+str(len(final_table))+'_CME-ICME_pairs.xlsx')
 
 # In[]: PLOT SPEED VS TRANSIT TIME 
 plt.figure()
@@ -245,6 +247,7 @@ abs_err = abs((final_table['Actual_Trans_Time']-final_table['Model_trans_time_hr
 # In[]: Distribution of Error 
 plt.figure()
 plt.hist2d(final_table['CME_Speed'], abs_err, bins=10)
+plt.colorbar()
 plt.xlabel(r'$V_{CME}$ $(km.s^{-1})$')
 plt.ylabel('Abs. Error (%)')
 plt.savefig(os.path.join(save_path, 'Output_plots' + '/', 'hist_V_vs_Err.png'))

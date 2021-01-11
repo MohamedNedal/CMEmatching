@@ -8,7 +8,7 @@ OMNI provides interspersed data from various spacecrafts.
 
 """
 # import numpy as np
-from pandas import read_excel, DataFrame, Timestamp
+from pandas import read_excel, DataFrame, Timestamp, to_datetime
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 import os.path
@@ -24,11 +24,57 @@ try:
 except OSError as error:
     print(error)
 
-# In[]: IMPORT THE LIST OF RANDOM CME EVENTS 
+# In[]: IMPORT THE LIST OF CME EVENTS 
 # sample = read_excel('Random_CMEs.xlsx', sheet_name='Sheet2', index_col='Datetime')
-sample = read_excel('Random_100_CMEs.xlsx', index_col='Datetime')
+date_columns = ['Shock_Date', 'Shock_Time', 'ICME_Time', 'CME_Date', 'CME_Time']
+sample = read_excel('List_from_Interplanetary shocks lacking type II radio bursts_paper.xlsx', sheet_name='Sheet1', parse_dates=date_columns)
 
-# Create an empty table to be filled with the CME info and its estimated transit time 
+# formatting the datetimes 
+for i in range(len(sample)):
+    try:
+        # Remove the '*' character in 'ICME Time' column 
+        if sample['ICME_Time'][i][0] == '*':
+            sample['ICME_Time'][i] = sample['ICME_Time'][i][1:]
+    except:
+        pass
+
+sample['Shock_Date'] = to_datetime(sample['Shock_Date'])
+sample['Shock_Time'] = to_datetime(sample['Shock_Time'])
+sample['ICME_Time'] = to_datetime(sample['ICME_Time'])
+sample['CME_Date'] = to_datetime(sample['CME_Date'])
+sample['CME_Time'] = to_datetime(sample['CME_Time'])
+
+new_cme_datetime = []
+new_icme_datetime = []
+for i in range(len(sample)):
+    new_cme_datetime.append(datetime.combine(sample['CME_Date'][i].date(), sample['CME_Time'][i].time()))
+    new_icme_datetime.append(datetime.combine(sample['Shock_Date'][i].date(), sample['ICME_Time'][i].time()))
+
+sample.insert(0, 'ICME_Datetime', new_icme_datetime)
+sample.insert(1, 'CME_Datetime', new_cme_datetime)
+
+trans_time_timedelta = []
+trans_time_hours = []
+for i in range(len(sample)):
+    trans_time_timedelta.append(new_icme_datetime[i] - new_cme_datetime[i])
+    trans_time_hours.append(round((trans_time_timedelta[i].days*24) + (trans_time_timedelta[i].seconds/3600), 2))
+
+sample.insert(sample.shape[1], 'Trans_Time', trans_time_hours)
+    
+for col in sample.columns:
+    try:
+        if col in sample.columns:
+            sample = sample.drop(columns={'Shock_Date',
+                                          'Shock_Time',
+                                          'ICME_Time',
+                                          'CME_Date',
+                                          'CME_Time'})
+    except KeyError as err:
+        print(err)
+
+sample.to_excel('List_from_Interplanetary shocks lacking type II radio bursts_paper_'+str(len(sample))+'_CME-ICME_pairs.xlsx')
+
+# In[]: Create an empty table to be filled with the CME info and its estimated transit time 
 final_table = []
 
 # Try to build a JSON file structure with these info for all events 
@@ -55,14 +101,14 @@ print('-------------------------------------------------------')
 
 for event_num in range(len(sample)):
         
-    arrival_datetime = G2001(sample.index[event_num], sample.Linear_Speed[event_num])
+    arrival_datetime = G2001(sample.CME_Datetime[event_num], sample.CME_Speed[event_num])
     
-    dt = arrival_datetime - sample.index[event_num]
-    print('CME launced on:', sample.index[event_num])
+    dt = arrival_datetime - sample.CME_Datetime[event_num]
+    print('CME launced on:', sample.CME_Datetime[event_num])
     print('Estimated arrival time is:', arrival_datetime)
     print('Estimated Transit time is: {} days, {} hours, {} minutes' .format(dt.components.days, 
-                                                                          dt.components.hours, 
-                                                                          dt.components.minutes))
+                                                                             dt.components.hours, 
+                                                                             dt.components.minutes))
     print('-------------------------------------------------------')
     
     # ------------------------------------------------------ 
@@ -97,7 +143,7 @@ for event_num in range(len(sample)):
     
     if Index_label_Dst == []:
         print('No value of Dst-index =< ', threshold, ' is found\nwithin the specified time interval in OMNI data.')
-        print('Skip the analysis for the CME launched on:', sample.index[event_num])
+        print('Skip the analysis for the CME number:', sample.index[event_num])
         print('-------------------------------------------------------')
     
     else:
@@ -152,14 +198,7 @@ for event_num in range(len(sample)):
                     axs[4].axvspan(omni_data['Ratio1800'].index[i-1], omni_data['N1800'].index[i], facecolor='#FFCC66', alpha=0.5)
                     axs[5].axvspan(omni_data['N1800'].index[i-1], omni_data['Pressure1800'].index[i], facecolor='#FFCC66', alpha=0.5)
                     axs[6].axvspan(omni_data['Beta1800'].index[i-1], omni_data['Beta1800'].index[i], facecolor='#FFCC66', alpha=0.5)
-                    axs[7].axvspan(omni_data['DST1800'].index[i-1], omni_data['DST1800'].index[i], facecolor='#FFCC66', alpha=0.5)                    
-    
-                    for ax in axs:
-                        ax.legend(loc='upper right', frameon=False, prop={'size': 10})
-                        ax.set_xlim([omni_data.index[0], omni_data.index[-1]])
-                        
-                        plt.xlabel('Date')
-                        fig.tight_layout()
+                    axs[7].axvspan(omni_data['DST1800'].index[i-1], omni_data['DST1800'].index[i], facecolor='#FFCC66', alpha=0.5)
                         
                     ''' 
                      RUN A FOR-LOOP THAT CHECK THE MIN. DIFF. BETWEEN 
@@ -198,20 +237,27 @@ for event_num in range(len(sample)):
             plt.savefig(os.path.join(save_path, 'Output_plots' + '/', 'OMNI_Data_for_CME_No_'+str(event_num)+'_'+st+'-'+en+'.png'))
 
             # APPEND THE OUTPUT TRANSIT TIME WITH THE CME INFO 
-            est_trans_time = Index_label_Dst[dt_G2001_idxLabel.index(min(dt_G2001_idxLabel))] - sample.index[event_num]
+            try:
+                est_trans_time = Index_label_Dst[dt_G2001_idxLabel.index(min(dt_G2001_idxLabel))] - sample.CME_Datetime[event_num]
+            except IndexError as idx_err:
+                print(idx_err)
+
             tran_time_hours = (est_trans_time.components.days * 24) + (est_trans_time.components.minutes / 60) + (est_trans_time.components.seconds / 3600)
 
-            final_table = final_table.append({'CME_datetime': sample.index[event_num], 
-                                              'Width': sample['Width'][event_num], 
-                                              'Linear_Speed': sample['Linear_Speed'][event_num], 
-                                              'Initial_Speed': sample['Initial_Speed'][event_num], 
-                                              'Final_Speed': sample['Final_Speed'][event_num], 
-                                              'Speed_20Rs': sample['Speed_20Rs'][event_num], 
-                                              'Accel': sample['Accel'][event_num], 
-                                              'MPA': sample['MPA'][event_num], 
+            final_table = final_table.append({'CME_datetime': sample.CME_Datetime[event_num], 
+                                              'Width': sample['W'][event_num], 
+                                              'Linear_Speed': sample['CME_Speed'][event_num], 
+                                              'Accel': sample['a'][event_num], 
                                               'Transit_time_hrs': tran_time_hours, 
                                               'est_ICME_datetime': est_trans_time}, ignore_index=True)
-
+            
+            for ax in axs:
+                ax.legend(loc='upper right', frameon=False, prop={'size': 10})
+                ax.set_xlim([omni_data.index[0], omni_data.index[-1]])
+                        
+                plt.xlabel('Date')
+                fig.tight_layout()
+                        
         else:
             print('The OMNI data from '+str(start_datetime)+' to '+str(end_datetime)+' has no Dst value below '+str(threshold)+' nT.')
             print('-------------------------------------------------------\n')

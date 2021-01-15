@@ -7,12 +7,12 @@ Importing and plotting data from OMNI Web Interface.
 OMNI provides interspersed data from various spacecrafts.
 
 """
-# import numpy as np
+import numpy as np
 from pandas import read_excel, DataFrame, Timestamp, to_datetime
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 import os.path
-from necessary_functions import get_omni, G2001
+from necessary_functions import get_omni_hr, get_omni_min, G2001
 from statistics import mean
 # Print out the data directory path and their sizes 
 from heliopy.data import helper as heliohelper
@@ -134,7 +134,7 @@ for event_num in range(len(sample)):
                             end_window.minute,
                             end_window.second)
     
-    omni_data = get_omni(start_datetime, end_datetime)
+    omni_data = get_omni_hr(start_datetime, end_datetime)
     
     # ------------------------------------------------------ 
     
@@ -155,10 +155,22 @@ for event_num in range(len(sample)):
         if min(omni_data['DST1800']) <= threshold:
             
             # Calculating half the expected solar wind temperature (0.5Texp) 
-            if mean(omni_data['V1800']) >= 500:
-                Texp = 0.5 * (((0.031*omni_data['V1800']) - 5.1)**2) * (10**3)
+            ''' 
+            define the Texp as mentioned in: 
+                Lopez, R. E., & Freeman, J. W. (1986). 
+                Solar wind proton temperature‐velocity relationship. 
+                Journal of Geophysical Research: Space Physics, 91(A2), 1701-1705. 
+                
+            ''' 
+                
+            if mean(omni_data['V1800']) > 500:
+                # for the high-speed wind 
+                Texp = (0.5*((0.031*omni_data['V1800']) - 4.39)**2)
+                
             else:
-                Texp = ((0.0106*omni_data['V1800']) - 0.278)**2
+                # for the high-speed wind 
+                Texp = (0.5*((0.77*omni_data['V1800']) - 265)**2)
+
             Texp.rename('Texp', inplace=True)
             
             # Find Geomagnetic Storms in Data 
@@ -262,4 +274,195 @@ plt.xlabel('Abs. Error (%)')
 plt.ylabel('Frequency')
 plt.savefig(os.path.join(save_path, 'Output_plots' + '/', 'hist_err.png'))
 
+# In[]: --- TEST --- 
 
+start_datetime = datetime(2003, 10, 25, 0, 0, 0)
+end_datetime = datetime(2003, 11, 3, 0, 0, 0)
+
+omni_data = get_omni_hr(start_datetime, end_datetime)
+
+''' 
+define the Texp as mentioned in: 
+    Lopez, R. E., & Freeman, J. W. (1986). 
+    Solar wind proton temperature‐velocity relationship. 
+    Journal of Geophysical Research: Space Physics, 91(A2), 1701-1705. 
+    
+''' 
+    
+if mean(omni_data['V1800']) > 500:
+    # for the high-speed wind 
+    # Texp = ((0.0106*omni_data['V1800']) - 0.278)**2
+    Texp = (0.5*((0.031*omni_data['V1800']) - 4.39)**2)
+    
+else:
+    # for the high-speed wind 
+    # Texp = 0.5 * (((0.031*omni_data['V1800']) - 5.1)**2) * (10**3)
+    Texp = (0.5*((0.77*omni_data['V1800']) - 265)**2)
+
+Texp.rename('Texp', inplace=True)
+
+# In[]: --- 
+x = Texp.index
+y1 = omni_data['T1800'].values
+y2 = Texp.values
+
+fig, ax = plt.subplots(figsize=(15,5))
+
+ax.plot(x, y1, label='$T_P$')
+ax.plot(x, y2, label=r'$0.5T_{exp}$')
+
+ax.fill_between(x, y1, y2, where=(y2 > y1), facecolor='red', alpha=0.5)
+
+# to get the indices of the intersection points between both curves 
+idx = np.argwhere(np.diff(np.sign(y1 - y2))).flatten()
+ax.plot(x[idx], y2[idx], 'ro')
+for i in idx:
+    ax.axvline(omni_data['T1800'].index[i], color='green', linewidth=1, linestyle='--')
+
+ax.legend(loc='best', frameon=False)
+ax.set_xlabel('Datetime')
+ax.set_ylabel('T (K)')
+ax.set_xlim(Texp.index[0], Texp.index[-1])
+plt.show()
+
+# In[]: --- 
+fig, axs = plt.subplots(2, figsize=(15,5))
+
+axs[0].plot(x, y1, label='$T_P$')
+axs[0].plot(x, y2, label=r'$0.5T_{exp}$')
+
+axs[0].fill_between(x, y1, y2, where=(y2 > y1), facecolor='red', alpha=0.5)
+
+# to get the indices of ICME boundaries 
+for i in range(len(y1)):
+    if y1[i] < y2[i]:
+        lines = ax.axvline(omni_data['T1800'].index[i], color='k', linewidth=1, linestyle='--')
+
+# deine the legend outside the loop to avoid showing multiple legends within the for-loop 
+lines.set_label('$T_{P}<T_{exp}$')
+axs[0].set_ylabel('T (K)')
+
+axs[1].plot(omni_data['Ratio1800'])
+
+axs[1].set_xlabel('Datetime')
+axs[1].set_ylabel(r'$\dfrac{N_{\alpha}}{N_{P}}$')
+    
+for ax in axs:
+    ax.legend(loc='best', frameon=False)
+    ax.set_xlim(Texp.index[52], Texp.index[-90])
+
+plt.show()
+
+# In[]: --- FOR PLOTTING 1-MIN OMNI DATA --- 
+start_datetime = datetime(2017, 9, 6, 0, 0, 0)
+end_datetime = datetime(2017, 9, 17, 0, 0, 0)
+
+omni_data = get_omni_min(start_datetime, end_datetime)
+
+fig, axs = plt.subplots(7, 1, figsize=(15,10), sharex=True)
+fig.suptitle('1-min OMNI data: ' + str(start_datetime) +' - ' + str(end_datetime))
+
+axs[0].plot(omni_data['F'], label='$<|B_{T}|>$')
+axs[0].set_ylabel('B (nT)')
+
+axs[1].plot(omni_data['BX_GSE'], label='Bx GSE')
+axs[1].plot(omni_data['BY_GSM'], label='By GSM')
+axs[1].plot(omni_data['BZ_GSM'], label='Bz GSM')
+axs[1].set_ylabel('B (nT)')
+
+axs[2].plot(omni_data['flow_speed'])
+axs[2].set_ylabel(r'$Flow\;Speed$'
+                  '\n'
+                  r'$(km.s^{-1})$')
+
+axs[3].plot(omni_data['T'], label='T')
+axs[3].set_ylabel('Temperature\n(K)')
+
+if mean(omni_data['flow_speed']) > 500:
+    # for the high-speed wind 
+    Texp = (0.5*((0.031*omni_data['flow_speed']) - 4.39)**2)
+else:
+    # for the high-speed wind 
+    Texp = (0.5*((0.77*omni_data['flow_speed']) - 265)**2)
+
+Texp.rename('Texp', inplace=True)
+
+axs[3].plot(Texp, label=r'$0.5T_{exp}$')
+axs[3].set_yscale('log')
+
+axs[4].plot(omni_data['NaNp_Ratio'])
+axs[4].set_ylabel('$\dfrac{N_{alpha}}{N_{p}}$')
+# axs[4].set_yscale('log')
+
+axs[5].plot(omni_data['Beta'])
+axs[5].set_yscale('log')
+axs[5].set_ylabel(r'$Plasma\;\beta$')
+
+axs[6].plot(omni_data['SYM_H'], label='SYM-H')
+axs[6].set_ylabel('Dst (nT)')
+
+for ax in axs:
+    ax.legend(loc='upper right', frameon=False, prop={'size': 10})
+    ax.set_xlim([omni_data.index[0], omni_data.index[-1]])
+
+plt.xlabel('Datetime')
+fig.tight_layout()
+plt.show()
+
+# In[]: --- FOR PLOTTING 1-HR OMNI DATA --- 
+start_datetime = datetime(2017, 9, 6, 0, 0, 0)
+end_datetime = datetime(2017, 9, 17, 0, 0, 0)
+
+omni_data = get_omni_hr(start_datetime, end_datetime)
+
+fig, axs = plt.subplots(8, 1, figsize=(15,13), sharex=True)
+fig.suptitle('1-hr OMNI data: ' + str(start_datetime) +' - ' + str(end_datetime))
+
+axs[0].plot(omni_data['F1800'])
+axs[0].set_ylabel('r$B_t$ $(nT)$')
+
+axs[1].plot(omni_data['BX_GSE1800'], color='dodgerblue', label=r'$B_x$ $GSE$')
+axs[1].plot(omni_data['BY_GSE1800'], color='green', label=r'$B_y$ $GSE$')
+axs[1].plot(omni_data['BZ_GSE1800'], color='orange', label='r$B_z$ $GSE$')
+axs[1].set_ylabel(r'$B_{x,y,z}\;(nT)$')
+
+axs[2].plot(omni_data['V1800'], label='$V_{sw}$')
+axs[2].set_ylabel(r'$V_{sw}$ $(km.s^{-1})$')
+
+axs[3].plot(omni_data['T1800'], label='$T_p$')
+# Calculating half the expected solar wind temperature (0.5Texp) 
+# the method I found in the paper: 
+# Lopez, R. E., & Freeman, J. W. (1986). 
+# Solar wind proton temperature‐velocity relationship. 
+# Journal of Geophysical Research: Space Physics, 91(A2), 1701-1705. 
+if mean(omni_data['V1800']) > 500:
+    # for the high-speed wind 
+    Texp = (0.5*((0.031*omni_data['V1800']) - 4.39)**2)
+else:
+    # for the high-speed wind 
+    Texp = (0.5*((0.77*omni_data['V1800']) - 265)**2)
+Texp.rename('Texp', inplace=True)
+
+axs[3].plot(Texp, label='$0.5T_{exp}$')
+axs[3].set_ylabel('T (K)')
+axs[3].set_yscale('log')
+
+axs[4].plot(omni_data['Ratio1800'])
+axs[4].set_ylabel('$\dfrac{N_{alpha}}{N_{p}}$')
+
+axs[5].plot(omni_data['N1800'], label=r'$n_{p}$ $(cm^{-3})$')
+axs[5].plot(omni_data['Pressure1800'], label='P (nPa)')
+
+axs[6].plot(omni_data['Beta1800'])
+axs[6].set_ylabel(r'$Plasma\;\beta$')
+
+axs[7].plot(omni_data['DST1800'])
+axs[7].set_ylabel('Dst (nT)')
+
+for ax in axs:
+    ax.legend(loc='upper right', frameon=False, prop={'size': 10})
+    ax.set_xlim([omni_data.index[0], omni_data.index[-1]])
+
+plt.xlabel('Datetime')
+fig.tight_layout()            
+plt.show()

@@ -11,7 +11,7 @@ from datetime import timedelta
 import heliopy.data.omni as omni
 
 # In[]: --- 
-def get_omni(start_datetime, end_datetime):
+def get_omni_hr(start_datetime, end_datetime):
     '''
     This function to download OMNI data from CDAWEB server. 
     
@@ -51,8 +51,8 @@ def get_omni(start_datetime, end_datetime):
         
         # --- SOLAR WIND PLASMA --- 
         
-        'T1800', # 1AU IP Plasma Temperature (deg K) 
-        'N1800', # 1AU IP Ion number density (per cc) 
+        'T1800', # 1AU IP Plasma Temperature (K) 
+        'N1800', # 1AU IP Ion number density (n/cc) 
         'V1800', # 1AU IP plasma flow speed (km/s) 
         'PHI$V1800', # 1AU IP plasma flow direction longitude (deg), phi 
         'THETA$V1800', # 1AU IP plasma flow direction latitude (deg), theta 
@@ -83,7 +83,7 @@ def get_omni(start_datetime, end_datetime):
         'SIGMA$By1800', # RMS deviation By (nT), GSE 
         'SIGMA$Bz1800', # RMS deviation Bz (nT), GSE 
         'SIGMA$T1800', # RMS deviation of plasma temperature (deg k) 
-        'SIGMA$N1800', # RMS deviation of ion number density (per cc) 
+        'SIGMA$N1800', # RMS deviation of ion number density (n/cc) 
         'SIGMA$V1800', # RMS deviation in plasma flow velocity (km/s) 
         'SIGMA$PHI$V1800', # RMS deviation in plasma flow direction longitude (deg), phi 
         'SIGMA$THETA$V1800', # RMS deviation in plasma flow direction latitude (deg), theta 
@@ -94,6 +94,62 @@ def get_omni(start_datetime, end_datetime):
     # print('\nFiltered columns are:\n', *fdata.columns, sep='\n')
     
     return fdata
+
+# In[]: --- 
+def get_omni_min(start_datetime, end_datetime):
+
+    ''' 
+    # High Resolution OMNI (HRO)
+    # Source: https://cdaweb.gsfc.nasa.gov/pub/data/omni/omni_cdaweb/ 
+    # Decsribtion: https://omniweb.gsfc.nasa.gov/html/HROdocum.html 
+
+    Parameters
+    ----------
+    start_datetime : datetime object
+        The format is 'yyyy,m,d,H,M,S'. 
+    end_datetime : datetime object
+        The format is 'yyyy,m,d,H,M,S'. 
+
+    Returns
+    -------
+    fdata : Dataframe 
+        The OMNI data within that period. 
+
+    '''
+    
+    omni_data = omni.hro2_1min(start_datetime, end_datetime)
+    data = omni_data.data
+    
+    # Consider only these columns  
+    fdata = data.filter(data[[
+        
+        # --- INTERPLANETARY MAGNETIC FIELD --- 
+        
+        'F', # IMF magnitude average (nT) 
+        'BX_GSE', # IMF x-comp. (nT) 
+        'BY_GSM', # IMF y-comp. (nT) 
+        'BZ_GSM', # IMF z-comp. (nT) 
+        'E', # Electric field (mV/m) 
+        'SYM_H', # High-resolution Dst index (nT) 
+        
+        # --- SOLAR WIND PLASMA --- 
+        
+        'flow_speed', # Solar wind speed (km/s) 
+        'Vx', # Solar wind x-speed (km/s) 
+        'Vy', # Solar wind y-speed (km/s) 
+        'Vz', # Solar wind z-speed (km/s) 
+        'proton_density', # Proton density (n/cc) 
+        'T', # Plasma Temperature (K) 
+        'NaNp_Ratio', # Alpha/proton ratio 
+        'Pressure', # Flow pressure (nPa) 
+        'Beta', # Plasma beta 
+        'Mach_num', # Alfven mach number 
+        'Mgs_mach_num' # Magnetosonic mach number 
+        ]])
+    
+    return fdata
+
+
 
 # In[]: --- 
 def magnetic_conversion(Bx, By, Bz):

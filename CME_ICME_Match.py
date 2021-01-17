@@ -8,7 +8,7 @@ OMNI provides interspersed data from various spacecrafts.
 
 """
 import numpy as np
-from pandas import read_excel, DataFrame, Timestamp, to_datetime
+from pandas import read_excel, DataFrame, Timestamp, to_datetime, date_range
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 import os.path
@@ -162,15 +162,12 @@ for event_num in range(len(sample)):
                 Journal of Geophysical Research: Space Physics, 91(A2), 1701-1705. 
                 
             ''' 
-                
             if mean(omni_data['V1800']) > 500:
                 # for the high-speed wind 
                 Texp = (0.5*((0.031*omni_data['V1800']) - 4.39)**2)
-                
             else:
                 # for the high-speed wind 
                 Texp = (0.5*((0.77*omni_data['V1800']) - 265)**2)
-
             Texp.rename('Texp', inplace=True)
             
             # Find Geomagnetic Storms in Data 
@@ -466,3 +463,117 @@ for ax in axs:
 plt.xlabel('Datetime')
 fig.tight_layout()            
 plt.show()
+
+# In[]: >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 
+# ------- ANOTHER METHOD OF MATCHING ------- 
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 
+# In[]: --- MATCHING TWO LISTS --- 
+''' SOHO/LASCO CME Catalog & WIND List of ICMEs ''' 
+
+CMEs = read_excel('CMEs_preprocessed.xlsx')
+ICMEs = read_excel('ICME_catalog_from_WIND.xlsx', sheet_name='Sheet1')
+# ICMEs = ICMEs.drop([0,1,2,3,4,5,6,7,8,9,10])
+CMEs['Datetime'] = to_datetime(CMEs['Datetime'])
+ICMEs['ICME_st'] = to_datetime(ICMEs['ICME_st'])
+ICMEs['MO_st'] = to_datetime(ICMEs['MO_st'])
+ICMEs['MO_ICME_et'] = to_datetime(ICMEs['MO_ICME_et'])
+
+# In[]: --- 
+# matched_table = DataFrame(columns=CMEs.columns)
+matched_table = DataFrame()
+trans_time = []
+
+for cme in range(len(CMEs)):
+    arrival_datetime = G2001(CMEs.Datetime[cme], CMEs.Linear_Speed[cme])
+    trans_time.append(arrival_datetime)
+    
+trans_time = to_datetime(trans_time)
+    
+    
+    # dt = arrival_datetime - CMEs.Datetime[cme]
+
+for i in range(len(trans_time)):
+    
+    start_window = trans_time[i] - timedelta(hours=11.04)
+    end_window = trans_time[i] + timedelta(hours=11.04)
+    
+    start_datetime = datetime(start_window.year,
+                              start_window.month,
+                              start_window.day,
+                              start_window.hour,
+                              start_window.minute,
+                              start_window.second)
+    
+    end_datetime = datetime(end_window.year,
+                            end_window.month,
+                            end_window.day,
+                            end_window.hour,
+                            end_window.minute,
+                            end_window.second)
+    
+    t = date_range(start_datetime, end_datetime)
+    
+    
+
+# min(trans_time, key=lambda s: trans_time[s] - ICMEs['ICME_st'])
+
+
+
+# def nearest(items, pivot):
+#     return min(items, key=lambda x: abs(x - pivot))
+#     # return min(item for item in items if item > pivot)
+
+# def nearest(items, pivot):
+#     if pivot in items:
+#         return pivot
+#     else:
+#         return min(items, key=lambda x: abs(x - pivot))
+
+# near = nearest(ICMEs.ICME_st, trans_time)
+
+
+
+
+# ICMEs.truncate(before=est_trans_time[5])
+# ICMEs.iloc[ICMEs.index.get_loc(est_trans_time[0], method='backfill')]    
+    
+    
+    # matched_table = matched_table.append({'CME_Datetime': CMEs.Datetime[cme], 
+    #                                       'CME_Width': CMEs.Width[cme], 
+    #                                       'CME_Linear_Speed': CMEs.Linear_Speed[cme], 
+    #                                       'CME_Initial_Speed': CMEs.Initial_Speed[cme], 
+    #                                       'CME_Final_Speed': CMEs.Final_Speed[cme], 
+    #                                       'CME_Speed_20Rs': CMEs.Speed_20Rs[cme], 
+    #                                       'CME_Accel': CMEs.Accel[cme], 
+    #                                       'CME_MPA': CMEs.MPA[cme]}, 
+    #                                       # 'ICME_Datetime': , 
+    #                                       # 'Model_trans_time_hrs': , 
+    #                                       ignore_index=True)
+
+# ICMEs = ICMEs.set_index('ICME_st')
+
+# near = []
+# for i in range(len(trans_time)):
+#     near.append(ICMEs.iloc[ICMEs.index.get_loc(trans_time[i], method='nearest')]) # backfill
+# near = DataFrame(near)
+
+# from datetime import timedelta, datetime
+# base_date = ICMEs.ICME_st[11]
+# # b_d = datetime.strptime(base_date, "%m/%d %I:%M %p")
+# def func(x):
+#     # d =  datetime.strptime(x[0], "%m/%d %I:%M %p")
+#     delta = x - base_date if x > base_date else timedelta.max
+#     return delta
+
+# min(trans_time, key = func)
+
+
+
+
+
+
+
+
+
+
+

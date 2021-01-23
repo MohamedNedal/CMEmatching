@@ -256,5 +256,3 @@ def G2001(CME_datetime, CME_speed):
 
 
 
-
-

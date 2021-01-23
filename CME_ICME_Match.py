@@ -16,6 +16,7 @@ from necessary_functions import get_omni_hr, get_omni_min, G2001
 from statistics import mean
 # Print out the data directory path and their sizes 
 from heliopy.data import helper as heliohelper
+import ruptures as rpt
 heliohelper.listdata()
 import warnings
 warnings.filterwarnings('ignore')
@@ -472,11 +473,18 @@ plt.show()
 
 CMEs = read_excel('CMEs_preprocessed.xlsx')
 ICMEs = read_excel('ICME_catalog_from_WIND.xlsx', sheet_name='Sheet1')
-# ICMEs = ICMEs.drop([0,1,2,3,4,5,6,7,8,9,10])
+
+# to start logically with the ICMEs list 
+CMEs = CMEs.drop([0,1,2,3,4,5,6], axis=0)
+ICMEs = ICMEs.drop([0,1,2,3,4,5,6,7,8,9,10], axis=0)
+
 CMEs['Datetime'] = to_datetime(CMEs['Datetime'])
 ICMEs['ICME_st'] = to_datetime(ICMEs['ICME_st'])
 ICMEs['MO_st'] = to_datetime(ICMEs['MO_st'])
 ICMEs['MO_ICME_et'] = to_datetime(ICMEs['MO_ICME_et'])
+
+CMEs = CMEs.set_index('Datetime')
+ICMEs = ICMEs.set_index('ICME_st')
 
 # In[]: --- 
 # matched_table = DataFrame(columns=CMEs.columns)
@@ -550,12 +558,13 @@ for i in range(len(trans_time)):
     #                                       # 'Model_trans_time_hrs': , 
     #                                       ignore_index=True)
 
-# ICMEs = ICMEs.set_index('ICME_st')
 
 # near = []
 # for i in range(len(trans_time)):
 #     near.append(ICMEs.iloc[ICMEs.index.get_loc(trans_time[i], method='nearest')]) # backfill
 # near = DataFrame(near)
+
+# ICMEs.truncate(before=trans_time[20])
 
 # from datetime import timedelta, datetime
 # base_date = ICMEs.ICME_st[11]
@@ -566,6 +575,314 @@ for i in range(len(trans_time)):
 #     return delta
 
 # min(trans_time, key = func)
+
+
+
+# ICMEs.index.get_loc(trans_time[20], method='nearest')
+
+
+# In[]: --- 
+T = []
+for i in range(len(ICMEs)):
+    est_t = ICMEs.index[i] - timedelta(days=3)
+    for j in range(len(CMEs)):
+        T.append(min(est_t - CMEs.index[j]))
+
+
+# In[]: --- 
+# est_t = ICMEs.index[0] - timedelta(days=4)
+# T = []
+# for j in range(len(CMEs)):
+#     T.append({'CME_datetime': CMEs.index[j], 
+#               'est_t': abs(est_t - CMEs.index[j])})
+    
+
+# T = DataFrame(T)
+
+
+# In[]: --- 
+# >>> <<< 
+sample = read_excel('List_from_Interplanetary shocks lacking type II radio bursts_paper_178_CME-ICME_pairs.xlsx')
+
+# In[]: --- forecast the arrival time of a CME event from the sample data 
+event_num = 176
+
+arrival_datetime = G2001(sample.CME_Datetime[event_num], sample.CME_Speed[event_num])
+
+dt = arrival_datetime - sample.CME_Datetime[event_num]
+print('\nCME launced on:', sample.CME_Datetime[event_num])
+print('Estimated arrival time is:', arrival_datetime)
+print('Estimated Transit time is: {} days, {} hours, {} minutes' .format(dt.components.days, 
+                                                                         dt.components.hours, 
+                                                                         dt.components.minutes))
+print('-------------------------------------------------------')
+
+start_window = arrival_datetime - timedelta(hours=11.04)
+end_window = arrival_datetime + timedelta(hours=11.04)
+
+start_datetime = datetime(start_window.year,
+                          start_window.month,
+                          start_window.day,
+                          start_window.hour,
+                          start_window.minute,
+                          start_window.second)
+
+end_datetime = datetime(end_window.year,
+                        end_window.month,
+                        end_window.day,
+                        end_window.hour,
+                        end_window.minute,
+                        end_window.second)
+
+omni_data_raw = get_omni_hr(start_datetime, end_datetime)
+
+# In[]: --- filter the OMNI columns 
+omni_col_lst = omni_data_raw.columns.values.tolist()
+omni_data = omni_data_raw.filter(omni_data_raw.columns[[1,6,7,8,9,12,13,15,25]])
+print(*omni_data.columns, sep= '\n')
+omni_data.plot(subplots=True)
+plt.show()
+
+# In[]: --- 
+fig, ax = plt.subplots(figsize=(15,4))
+omni_data['DST1800'].plot(legend=False, ax=ax)
+plt.show()
+
+# In[]: --- 
+fig, ax = plt.subplots(figsize=(15,4))
+omni_data['T1800'].plot(legend=False, ax=ax)
+if mean(omni_data['V1800']) > 500:
+    Texp = (0.5*((0.031*omni_data['V1800']) - 4.39)**2)
+else:
+    Texp = (0.5*((0.77*omni_data['V1800']) - 265)**2)
+Texp.rename('Texp', inplace=True)
+Texp.plot(legend=False, ax=ax)
+plt.show()
+
+# In[]: --- 
+#Convert the time series values to a numpy 1D array
+# points = np.array(omni_data['DST1800'])
+    
+#RUPTURES PACKAGE
+#Changepoint detection with the Pelt search method
+# model="rbf"
+# algo = rpt.Pelt(model=model).fit(points)
+# result = algo.predict(pen=10)
+# rpt.display(points, result, figsize=(10, 6))
+# plt.title('Change Point Detection: Pelt Search Method')
+# plt.show()  
+    
+#Changepoint detection with the Binary Segmentation search method
+# model = 'l2'
+# algo = rpt.Binseg(model=model).fit(points)
+# my_bkps = algo.predict(n_bkps=10)
+# # show results
+# rpt.show.display(points, my_bkps, figsize=(15, 4))
+# plt.title('Change Point Detection: Binary Segmentation Search Method')
+# plt.show()
+    
+#Changepoint detection with window-based search method
+# model = "l2"  
+# algo = rpt.Window(width=40, model=model).fit(points)
+# my_bkps = algo.predict(n_bkps=10)
+# rpt.show.display(points, my_bkps, figsize=(10, 6))
+# plt.title('Change Point Detection: Window-Based Search Method')
+# plt.show()
+    
+#Changepoint detection with dynamic programming search method
+# model = "l1"  
+# algo = rpt.Dynp(model=model, min_size=3, jump=5).fit(points)
+# my_bkps = algo.predict(n_bkps=10)
+# rpt.show.display(points, my_bkps, figsize=(10, 6))
+# plt.title('Change Point Detection: Dynamic Programming Search Method')
+# plt.show()
+
+# In[]: --- 
+figs, axs = [], []
+for col in omni_data.columns:
+    points = np.array(omni_data[col])
+    algo = rpt.Dynp(model='l2').fit(points)
+    result = algo.predict(n_bkps=2)
+    fig, ax = rpt.display(points, result, result, figsize=(15, 3))
+    figs.append(fig)
+    axs.append(ax)
+    plt.title(col + '\nChange Point Detection: Dynamic Programming Search Method')
+    plt.tight_layout(pad=1.0)
+    plt.xlim([0, len(points)-1])
+    plt.show()
+
+# In[]: --- 
+points = np.array(omni_data['DST1800'])
+algo = rpt.Dynp(model='l2').fit(points)
+result = algo.predict(n_bkps=2)
+fig, ax = rpt.display(points, result, result, figsize=(15, 3))
+figs.append(fig)
+axs.append(ax)
+plt.title(col + '\nChange Point Detection: Dynamic Programming Search Method')
+plt.tight_layout(pad=1.0)
+plt.xlim([0, len(points)-1])
+plt.show()
+# # getting the timestamps of the change points
+bkps_timestamps = omni_data['DST1800'].iloc[[0] + result[:-1] +[-1]].index
+# computing the durations between change points
+durations = (bkps_timestamps[1:] - bkps_timestamps[:-1])
+# hours
+d = durations.seconds/60/60
+d_f = DataFrame(d)
+
+one = f'1st segment {d_f.values[0][0]} hours'
+two = f'2nd segment {d_f.values[1][0]} hours'
+three = f'3rd segment {d_f.values[2][0]} hours'
+
+plt.title('Change Point Detection: Binary Segmentation Search Method')
+plt.text(0.5, -9, 'Retrieved durations between change points, in hours:')
+plt.text(0.5, -13, one)
+plt.text(0.5, -18, two)
+plt.text(0.5, -23, three)
+plt.show()
+
+fig, ax = plt.subplots(figsize=(15,3))
+omni_data['DST1800'].plot(legend=False, ax=ax)
+st = bkps_timestamps[1]
+et = bkps_timestamps[2]
+ax.axvspan(st, et, facecolor='#FFCC66', alpha=0.5)
+window = omni_data['DST1800'].loc[st:et]
+min_idx = window[window.values==min(window)].index
+ax.axvline(min_idx.values, color='r', linewidth=2, linestyle='--')
+plt.tight_layout()
+plt.show()
+
+# In[]: --- EXAMPLE --- 
+# make random data with 100 samples and 9 columns 
+# n_samples, n_dims, sigma = 100, 9, 2
+# n_bkps = 4
+# signal, bkps = rpt.pw_constant(n_samples, n_dims, n_bkps, noise_std=sigma)
+
+# figs, axs = [], []
+# for i in range(signal.shape[1]):
+#     points = signal[:,i]
+#     # detection of change points 
+#     algo = rpt.Dynp(model='l2').fit(points)
+#     result = algo.predict(n_bkps=2)
+#     fig, ax = rpt.display(points, bkps, result, figsize=(15,3))
+#     figs.append(fig)
+#     axs.append(ax)
+#     plt.show()
+
+# fig, ax = plt.subplots()
+# for i in range(5):
+#     f, x = rpt.display(points, result, result)
+#     fig.add_subplot(111)
+    
+
+
+
+# In[]: --- 
+# detection 
+points = np.array(omni_data['DST1800'])
+algo = rpt.Dynp(model='l2').fit(points)
+result = algo.predict(n_bkps=2)
+# display 
+rpt.display(points, result, result, figsize=(15, 3))
+plt.title('Change Point Detection: Dynamic Programming Search Method')
+plt.tight_layout(pad=1.0)
+plt.xlim([0, len(points)-1])
+plt.show()
+
+# In[]: --- 
+fig, axs = plt.subplots(8, 1, figsize=(15,13), sharex=True)
+fig.suptitle('1-hr OMNI data: ' + str(start_datetime) +' - ' + str(end_datetime) + '\nChange Point Detection: Dynamic Programming Search Method')
+
+axs[0].plot(omni_data['F1800'])
+axs[0].set_ylabel('r$B_t$ $(nT)$')
+
+axs[1].plot(omni_data['BX_GSE1800'], color='dodgerblue', label=r'$B_x$ $GSE$')
+axs[1].plot(omni_data['BY_GSE1800'], color='green', label=r'$B_y$ $GSE$')
+axs[1].plot(omni_data['BZ_GSE1800'], color='orange', label='r$B_z$ $GSE$')
+axs[1].set_ylabel(r'$B_{x,y,z}\;(nT)$')
+
+axs[2].plot(omni_data['V1800'], label='$V_{sw}$')
+axs[2].set_ylabel(r'$V_{sw}$ $(km.s^{-1})$')
+
+axs[3].plot(omni_data['T1800'], label='$T_p$')
+# Calculating half the expected solar wind temperature (0.5Texp) 
+# the method I found in the paper: 
+# Lopez, R. E., & Freeman, J. W. (1986). 
+# Solar wind proton temperature‐velocity relationship. 
+# Journal of Geophysical Research: Space Physics, 91(A2), 1701-1705. 
+if mean(omni_data['V1800']) > 500:
+    Texp = (0.5*((0.031*omni_data['V1800']) - 4.39)**2)
+else:
+    Texp = (0.5*((0.77*omni_data['V1800']) - 265)**2)
+Texp.rename('Texp', inplace=True)
+
+axs[3].plot(Texp, label='$0.5T_{exp}$')
+axs[3].set_ylabel('T (K)')
+axs[3].set_yscale('log')
+
+axs[4].plot(omni_data['Ratio1800'])
+axs[4].set_ylabel('$\dfrac{N_{alpha}}{N_{p}}$')
+
+axs[5].plot(omni_data['N1800'], label=r'$n_{p}$ $(cm^{-3})$')
+axs[5].plot(omni_data['Pressure1800'], label='P (nPa)')
+
+axs[6].plot(omni_data['Beta1800'])
+axs[6].set_ylabel(r'$Plasma\;\beta$')
+
+axs[7].plot(omni_data['DST1800'])
+axs[7].set_ylabel('Dst (nT)')
+
+for ax in axs:
+    ax.legend(loc='upper right', frameon=False, prop={'size': 10})
+    ax.set_xlim([0, len(points)-1])
+
+plt.xlabel('Timestep')
+fig.tight_layout(pad=1.0)            
+plt.show()
+
+
+
+
+# In[]: --- 
+
+
+
+# In[]: --- 
+
+
+
+
+
+
+
+
+
+# In[]: --- 
+
+
+
+
+
+# In[]: --- 
+
+
+
+
+
+
+
+
+
+
+
+# In[]: --- 
+
+
+
+
+
+
+
 
 
 

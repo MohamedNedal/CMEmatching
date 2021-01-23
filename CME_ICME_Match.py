@@ -617,8 +617,8 @@ print('Estimated Transit time is: {} days, {} hours, {} minutes' .format(dt.comp
                                                                          dt.components.minutes))
 print('-------------------------------------------------------')
 
-start_window = arrival_datetime - timedelta(hours=11.04)
-end_window = arrival_datetime + timedelta(hours=11.04)
+start_window = arrival_datetime - timedelta(hours=13) # hours=11.04 
+end_window = arrival_datetime + timedelta(hours=13) # hours=11.04 
 
 start_datetime = datetime(start_window.year,
                           start_window.month,
@@ -638,7 +638,7 @@ omni_data_raw = get_omni_hr(start_datetime, end_datetime)
 
 # In[]: --- filter the OMNI columns 
 omni_col_lst = omni_data_raw.columns.values.tolist()
-omni_data = omni_data_raw.filter(omni_data_raw.columns[[1,6,7,8,9,12,13,15,25]])
+omni_data = omni_data_raw.filter(omni_data_raw.columns[[1,6,7,8,9,13,25]])
 print(*omni_data.columns, sep= '\n')
 omni_data.plot(subplots=True)
 plt.show()
@@ -660,230 +660,260 @@ Texp.plot(legend=False, ax=ax)
 plt.show()
 
 # In[]: --- 
-#Convert the time series values to a numpy 1D array
-# points = np.array(omni_data['DST1800'])
-    
-#RUPTURES PACKAGE
-#Changepoint detection with the Pelt search method
-# model="rbf"
-# algo = rpt.Pelt(model=model).fit(points)
-# result = algo.predict(pen=10)
-# rpt.display(points, result, figsize=(10, 6))
-# plt.title('Change Point Detection: Pelt Search Method')
-# plt.show()  
-    
-#Changepoint detection with the Binary Segmentation search method
-# model = 'l2'
-# algo = rpt.Binseg(model=model).fit(points)
-# my_bkps = algo.predict(n_bkps=10)
-# # show results
-# rpt.show.display(points, my_bkps, figsize=(15, 4))
-# plt.title('Change Point Detection: Binary Segmentation Search Method')
-# plt.show()
-    
-#Changepoint detection with window-based search method
-# model = "l2"  
-# algo = rpt.Window(width=40, model=model).fit(points)
-# my_bkps = algo.predict(n_bkps=10)
-# rpt.show.display(points, my_bkps, figsize=(10, 6))
-# plt.title('Change Point Detection: Window-Based Search Method')
-# plt.show()
-    
-#Changepoint detection with dynamic programming search method
-# model = "l1"  
-# algo = rpt.Dynp(model=model, min_size=3, jump=5).fit(points)
-# my_bkps = algo.predict(n_bkps=10)
-# rpt.show.display(points, my_bkps, figsize=(10, 6))
-# plt.title('Change Point Detection: Dynamic Programming Search Method')
-# plt.show()
+# figs, axs = [], []
+# for col in omni_data.columns:
+#     points = np.array(omni_data[col])
+#     algo = rpt.Dynp(model='l2').fit(points)
+#     result = algo.predict(n_bkps=2)
+#     fig, ax = rpt.display(points, result, result, figsize=(15, 3))
+#     figs.append(fig)
+#     axs.append(ax)
+#     plt.title(col + '\nChange Point Detection: Dynamic Programming Search Method')
+#     plt.tight_layout(pad=1.0)
+#     plt.xlim([0, len(points)-1])
+#     plt.show()
 
 # In[]: --- 
-figs, axs = [], []
-for col in omni_data.columns:
-    points = np.array(omni_data[col])
+col_lst = omni_data.columns
+# number of subplots
+n_subpl = len(omni_data.columns) # or omni_data.shape[1] 
+# give figure a name to refer to it later 
+figname = '1-hr OMNI data: ' + str(start_datetime) +' - ' + str(end_datetime) + '\nChange Point Detection: Dynamic Programming Search Method'
+fig = plt.figure(num=figname, figsize=(8, 15))
+# define grid of nrows x ncols
+gs = fig.add_gridspec(n_subpl, 1)
+# convert the dataframe to numpy array 
+values = np.array(omni_data)
+
+chp_indices = []
+
+for i in range(n_subpl):
+    points = values[:,i]
     algo = rpt.Dynp(model='l2').fit(points)
     result = algo.predict(n_bkps=2)
-    fig, ax = rpt.display(points, result, result, figsize=(15, 3))
-    figs.append(fig)
-    axs.append(ax)
-    plt.title(col + '\nChange Point Detection: Dynamic Programming Search Method')
+    _, curr_ax = rpt.display(points, result, result, num=figname)
+    # position current subplot within grid
+    curr_ax[0].set_position(gs[i].get_position(fig))
+    curr_ax[0].set_subplotspec(gs[i])
+    curr_ax[0].set_xlim([0, len(points)-1])
+    curr_ax[0].set_ylabel(col_lst[i])
     plt.tight_layout(pad=1.0)
-    plt.xlim([0, len(points)-1])
+    # getting the timestamps of the change points
+    bkps_timestamps = omni_data[col_lst[i]].iloc[[0] + result[:-1] + [-1]].index
+    # # computing the durations between change points
+    # durations = (bkps_timestamps[1:] - bkps_timestamps[:-1])
+    # # hours
+    # d_f = DataFrame(durations.seconds/60/60)
+    # # write the durations on the plot 
+    # one = f'1st segment {d_f.values[0][0]} hours'
+    # two = f'2nd segment {d_f.values[1][0]} hours'
+    # three = f'3rd segment {d_f.values[2][0]} hours'
+    # plt.text(0.5, -9, 'Retrieved durations between change points, in hours:')
+    # plt.text(0.5, -13, one)
+    # plt.text(0.5, -18, two)
+    # plt.text(0.5, -23, three)
+    # record the start and end times of the change-point duration 
+    st = bkps_timestamps[1]
+    et = bkps_timestamps[2]
+    # shade the time span  
+    ax.axvspan(st, et, facecolor='#FFCC66', alpha=0.5)
+    # get a sub-dataframe for the time span 
+    window = omni_data['DST1800'].loc[st:et]
+    # get the timestamp index at the min value within the window time span 
+    min_idx = window[window.values==min(window)].index
+    # plot vertical line at the index of the min value 
+    ax.axvline(min_idx.values[0], color='r', linewidth=2, linestyle='--')
+    # export the required values for the other subplot 
+    chp_indices.append(bkps_timestamps)    
     plt.show()
 
 # In[]: --- 
-points = np.array(omni_data['DST1800'])
-algo = rpt.Dynp(model='l2').fit(points)
-result = algo.predict(n_bkps=2)
-fig, ax = rpt.display(points, result, result, figsize=(15, 3))
-figs.append(fig)
-axs.append(ax)
-plt.title(col + '\nChange Point Detection: Dynamic Programming Search Method')
-plt.tight_layout(pad=1.0)
-plt.xlim([0, len(points)-1])
-plt.show()
+# points = np.array(omni_data['DST1800'])
+# algo = rpt.Dynp(model='l2').fit(points)
+# result = algo.predict(n_bkps=2)
+# fig, ax = rpt.display(points, result, result, figsize=(15, 3))
+# figs.append(fig)
+# axs.append(ax)
+# plt.title(col + '\nChange Point Detection: Dynamic Programming Search Method')
+# plt.tight_layout(pad=1.0)
+# plt.xlim([0, len(points)-1])
+# plt.show()
 # # getting the timestamps of the change points
-bkps_timestamps = omni_data['DST1800'].iloc[[0] + result[:-1] +[-1]].index
-# computing the durations between change points
-durations = (bkps_timestamps[1:] - bkps_timestamps[:-1])
-# hours
-d = durations.seconds/60/60
-d_f = DataFrame(d)
+# bkps_timestamps = omni_data['DST1800'].iloc[[0] + result[:-1] +[-1]].index
+# # computing the durations between change points
+# durations = (bkps_timestamps[1:] - bkps_timestamps[:-1])
+# # hours
+# d = durations.seconds/60/60
+# d_f = DataFrame(d)
 
-one = f'1st segment {d_f.values[0][0]} hours'
-two = f'2nd segment {d_f.values[1][0]} hours'
-three = f'3rd segment {d_f.values[2][0]} hours'
+# one = f'1st segment {d_f.values[0][0]} hours'
+# two = f'2nd segment {d_f.values[1][0]} hours'
+# three = f'3rd segment {d_f.values[2][0]} hours'
 
-plt.title('Change Point Detection: Binary Segmentation Search Method')
-plt.text(0.5, -9, 'Retrieved durations between change points, in hours:')
-plt.text(0.5, -13, one)
-plt.text(0.5, -18, two)
-plt.text(0.5, -23, three)
+# plt.title('Change Point Detection: Binary Segmentation Search Method')
+# plt.text(0.5, -9, 'Retrieved durations between change points, in hours:')
+# plt.text(0.5, -13, one)
+# plt.text(0.5, -18, two)
+# plt.text(0.5, -23, three)
+# plt.show()
+
+fig, axs = plt.subplots(omni_data.shape[1], 1, figsize=(15,13), sharex=True)
+
+# Bt 
+fig1_idx = 0
+chp_fig1 = chp_indices[fig1_idx]
+st1 = chp_fig1[1]
+et1 = chp_fig1[2]
+window1 = omni_data['F1800'].loc[st1:et1]
+min_idx1 = window1[window1.values==max(window1)].index
+axs[fig1_idx].plot(omni_data['F1800'])
+axs[fig1_idx].axvspan(st1, et1, facecolor='#FFCC66', alpha=0.5)
+axs[fig1_idx].axvline(min_idx1.values, color='r', linewidth=2, linestyle='--')
+axs[fig1_idx].set_ylabel(r'$B_{t}$ $(nT)$')
+
+# Bz 
+fig2_idx = 1
+chp_fig2 = chp_indices[fig2_idx]
+st2 = chp_fig2[1]
+et2 = chp_fig2[2]
+window2 = omni_data['BZ_GSE1800'].loc[st2:et2]
+min_idx2 = window2[window2.values==min(window2)].index
+axs[fig2_idx].plot(omni_data['BZ_GSE1800'])
+axs[fig2_idx].axvspan(st2, et2, facecolor='#FFCC66', alpha=0.5)
+axs[fig2_idx].axvline(min_idx2.values, color='r', linewidth=2, linestyle='--')
+axs[fig2_idx].set_ylabel(r'$B_{z}$ $(nT)$')
+
+# Temp 
+fig3_idx = 2
+axs[fig3_idx].set_yscale('log')
+chp_fig3 = chp_indices[fig3_idx]
+st3 = chp_fig3[1]
+et3 = chp_fig3[2]
+window3 = omni_data['T1800'].loc[st3:et3]
+min_idx3 = window3[window3.values==max(window3)].index
+axs[fig3_idx].plot(omni_data['T1800'])
+axs[fig3_idx].axvspan(st3, et3, facecolor='#FFCC66', alpha=0.5)
+axs[fig3_idx].axvline(min_idx3.values, color='r', linewidth=2, linestyle='--')
+axs[fig3_idx].set_ylabel(r'$T_{p}$ $(K)$')
+
+# Density 
+fig4_idx = 3
+chp_fig4 = chp_indices[fig4_idx]
+st4 = chp_fig4[1]
+et4 = chp_fig4[2]
+window4 = omni_data['N1800'].loc[st4:et4]
+min_idx4 = window4[window4.values==max(window4)].index
+axs[fig4_idx].plot(omni_data['N1800'])
+axs[fig4_idx].axvspan(st4, et4, facecolor='#FFCC66', alpha=0.5)
+axs[fig4_idx].axvline(min_idx4.values, color='r', linewidth=2, linestyle='--')
+axs[fig4_idx].set_ylabel(r'$n_{p}$ $(cm^{-3})$')
+
+# V 
+fig5_idx = 4
+chp_fig5 = chp_indices[fig5_idx]
+st5 = chp_fig5[1]
+et5 = chp_fig5[2]
+window5 = omni_data['V1800'].loc[st5:et5]
+min_idx5 = window5[window5.values==max(window5)].index
+axs[fig5_idx].plot(omni_data['V1800'])
+axs[fig5_idx].axvspan(st5, et5, facecolor='#FFCC66', alpha=0.5)
+axs[fig5_idx].axvline(min_idx5.values, color='r', linewidth=2, linestyle='--')
+axs[fig5_idx].set_ylabel('$V_{sw}$\n$(km.s^{-1})$')
+
+# P 
+fig6_idx = 5
+chp_fig6 = chp_indices[fig6_idx]
+st6 = chp_fig6[1]
+et6 = chp_fig6[2]
+window6 = omni_data['Pressure1800'].loc[st6:et6]
+min_idx6 = window6[window6.values==max(window6)].index
+axs[fig6_idx].plot(omni_data['Pressure1800'])
+axs[fig6_idx].axvspan(st6, et6, facecolor='#FFCC66', alpha=0.5)
+axs[fig6_idx].axvline(min_idx6.values, color='r', linewidth=2, linestyle='--')
+axs[fig6_idx].set_ylabel('P (nPa)')
+
+# Dst 
+fig7_idx = 6
+chp_fig7 = chp_indices[fig7_idx]
+st7 = chp_fig7[1]
+et7 = chp_fig7[2]
+window7 = omni_data['DST1800'].loc[st7:et7]
+min_idx7 = window7[window7.values==min(window7)].index
+axs[fig7_idx].plot(omni_data['DST1800'])
+axs[fig7_idx].axvspan(st7, et7, facecolor='#FFCC66', alpha=0.5)
+axs[fig7_idx].axvline(min_idx7.values, color='r', linewidth=2, linestyle='--')
+axs[fig7_idx].set_ylabel('Dst (nT)')
+
+for ax in axs:
+    ax.set_xlim([omni_data.index[0], omni_data.index[-1]])
+
+plt.xlabel('Datetime')
+fig.tight_layout(pad=1.0)            
 plt.show()
 
-fig, ax = plt.subplots(figsize=(15,3))
-omni_data['DST1800'].plot(legend=False, ax=ax)
-st = bkps_timestamps[1]
-et = bkps_timestamps[2]
-ax.axvspan(st, et, facecolor='#FFCC66', alpha=0.5)
-window = omni_data['DST1800'].loc[st:et]
-min_idx = window[window.values==min(window)].index
-ax.axvline(min_idx.values, color='r', linewidth=2, linestyle='--')
-plt.tight_layout()
-plt.show()
+# fig, ax = plt.subplots(figsize=(15,3))
+# omni_data['DST1800'].plot(legend=False, ax=ax)
+# st = bkps_timestamps[1]
+# et = bkps_timestamps[2]
+# ax.axvspan(st, et, facecolor='#FFCC66', alpha=0.5)
+# window = omni_data['DST1800'].loc[st:et]
+# min_idx = window[window.values==min(window)].index
+# ax.axvline(min_idx.values, color='r', linewidth=2, linestyle='--')
+# plt.tight_layout()
+# plt.show()
 
-# In[]: --- EXAMPLE --- 
-# make random data with 100 samples and 9 columns 
+# In[]: --- 
+
+
+# In[]: --- 
+
+
+# In[]: --- 
+
+
+
+# In[]: --- 
+
+
+
+
+
+
+
+
+
+# In[]: --- 
+
+# In[]: --- 
+# Example -- suggestion from Mr.T on stakeoverflow.com 
+# https://stackoverflow.com/questions/65837926/how-to-plot-a-list-of-figures-in-a-single-subplot/65857915#65857915 
+
+# import ruptures as rpt
+# import matplotlib.pyplot as plt
+
 # n_samples, n_dims, sigma = 100, 9, 2
 # n_bkps = 4
 # signal, bkps = rpt.pw_constant(n_samples, n_dims, n_bkps, noise_std=sigma)
 
-# figs, axs = [], []
-# for i in range(signal.shape[1]):
+# # number of subplots
+# n_subpl = signal.shape[1]
+# # give figure a name to refer to it later
+# fig = plt.figure(num = "ruptures_figure", figsize=(8, 15))
+# # define grid of nrows x ncols
+# gs = fig.add_gridspec(n_subpl, 1)
+
+# for i in range(n_subpl):
 #     points = signal[:,i]
-#     # detection of change points 
 #     algo = rpt.Dynp(model='l2').fit(points)
 #     result = algo.predict(n_bkps=2)
-#     fig, ax = rpt.display(points, bkps, result, figsize=(15,3))
-#     figs.append(fig)
-#     axs.append(ax)
-#     plt.show()
+#     #rpt.display(points, bkps, result)
+#     #plot into predefined figure
+#     _, curr_ax = rpt.display(points, bkps, result, num="ruptures_figure")
+#     #position current subplot within grid
+#     curr_ax[0].set_position(gs[i].get_position(fig))
+#     curr_ax[0].set_subplotspec(gs[i])
 
-# fig, ax = plt.subplots()
-# for i in range(5):
-#     f, x = rpt.display(points, result, result)
-#     fig.add_subplot(111)
-    
-
-
-
-# In[]: --- 
-# detection 
-points = np.array(omni_data['DST1800'])
-algo = rpt.Dynp(model='l2').fit(points)
-result = algo.predict(n_bkps=2)
-# display 
-rpt.display(points, result, result, figsize=(15, 3))
-plt.title('Change Point Detection: Dynamic Programming Search Method')
-plt.tight_layout(pad=1.0)
-plt.xlim([0, len(points)-1])
-plt.show()
-
-# In[]: --- 
-fig, axs = plt.subplots(8, 1, figsize=(15,13), sharex=True)
-fig.suptitle('1-hr OMNI data: ' + str(start_datetime) +' - ' + str(end_datetime) + '\nChange Point Detection: Dynamic Programming Search Method')
-
-axs[0].plot(omni_data['F1800'])
-axs[0].set_ylabel('r$B_t$ $(nT)$')
-
-axs[1].plot(omni_data['BX_GSE1800'], color='dodgerblue', label=r'$B_x$ $GSE$')
-axs[1].plot(omni_data['BY_GSE1800'], color='green', label=r'$B_y$ $GSE$')
-axs[1].plot(omni_data['BZ_GSE1800'], color='orange', label='r$B_z$ $GSE$')
-axs[1].set_ylabel(r'$B_{x,y,z}\;(nT)$')
-
-axs[2].plot(omni_data['V1800'], label='$V_{sw}$')
-axs[2].set_ylabel(r'$V_{sw}$ $(km.s^{-1})$')
-
-axs[3].plot(omni_data['T1800'], label='$T_p$')
-# Calculating half the expected solar wind temperature (0.5Texp) 
-# the method I found in the paper: 
-# Lopez, R. E., & Freeman, J. W. (1986). 
-# Solar wind proton temperature‐velocity relationship. 
-# Journal of Geophysical Research: Space Physics, 91(A2), 1701-1705. 
-if mean(omni_data['V1800']) > 500:
-    Texp = (0.5*((0.031*omni_data['V1800']) - 4.39)**2)
-else:
-    Texp = (0.5*((0.77*omni_data['V1800']) - 265)**2)
-Texp.rename('Texp', inplace=True)
-
-axs[3].plot(Texp, label='$0.5T_{exp}$')
-axs[3].set_ylabel('T (K)')
-axs[3].set_yscale('log')
-
-axs[4].plot(omni_data['Ratio1800'])
-axs[4].set_ylabel('$\dfrac{N_{alpha}}{N_{p}}$')
-
-axs[5].plot(omni_data['N1800'], label=r'$n_{p}$ $(cm^{-3})$')
-axs[5].plot(omni_data['Pressure1800'], label='P (nPa)')
-
-axs[6].plot(omni_data['Beta1800'])
-axs[6].set_ylabel(r'$Plasma\;\beta$')
-
-axs[7].plot(omni_data['DST1800'])
-axs[7].set_ylabel('Dst (nT)')
-
-for ax in axs:
-    ax.legend(loc='upper right', frameon=False, prop={'size': 10})
-    ax.set_xlim([0, len(points)-1])
-
-plt.xlabel('Timestep')
-fig.tight_layout(pad=1.0)            
-plt.show()
-
-
-
-
-# In[]: --- 
-
-
-
-# In[]: --- 
-
-
-
-
-
-
-
-
-
-# In[]: --- 
-
-
-
-
-
-# In[]: --- 
-
-
-
-
-
-
-
-
-
-
-
-# In[]: --- 
-
-
-
-
-
-
-
-
+# plt.show()
 
 
 

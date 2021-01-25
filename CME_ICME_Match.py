@@ -168,11 +168,12 @@ for event_num in range(len(sample)):
     min_idx1 = window1[window1.values==max(window1)].index
     try:
         timestamps_lst.append(min_idx1[0])
+        axs[fig1_idx].axvline(min_idx1.values[0], color='r', linewidth=2, linestyle='--')
     except IndexError as er:
         print(er)
     axs[fig1_idx].plot(omni_data['F1800'])
     axs[fig1_idx].axvspan(st1, et1, facecolor='#FFCC66', alpha=0.5)
-    axs[fig1_idx].axvline(min_idx1.values[0], color='r', linewidth=2, linestyle='--')
+    # axs[fig1_idx].axvline(min_idx1.values[0], color='r', linewidth=2, linestyle='--')
     axs[fig1_idx].set_ylabel(r'$B_{t}$ $(nT)$')
     
     # Bz 
@@ -184,11 +185,12 @@ for event_num in range(len(sample)):
     min_idx2 = window2[window2.values==min(window2)].index
     try:
         timestamps_lst.append(min_idx2[0])
+        axs[fig2_idx].axvline(min_idx2.values[0], color='r', linewidth=2, linestyle='--')
     except IndexError as er:
         print(er)
     axs[fig2_idx].plot(omni_data['BZ_GSE1800'])
     axs[fig2_idx].axvspan(st2, et2, facecolor='#FFCC66', alpha=0.5)
-    axs[fig2_idx].axvline(min_idx2.values[0], color='r', linewidth=2, linestyle='--')
+    # axs[fig2_idx].axvline(min_idx2.values[0], color='r', linewidth=2, linestyle='--')
     axs[fig2_idx].set_ylabel(r'$B_{z}$ $(nT)$')
     
     # Temp 
@@ -201,11 +203,12 @@ for event_num in range(len(sample)):
     min_idx3 = window3[window3.values==max(window3)].index
     try:
         timestamps_lst.append(min_idx3[0])
+        axs[fig3_idx].axvline(min_idx3.values[0], color='r', linewidth=2, linestyle='--')
     except IndexError as er:
         print(er)
     axs[fig3_idx].plot(omni_data['T1800'])
     axs[fig3_idx].axvspan(st3, et3, facecolor='#FFCC66', alpha=0.5)
-    axs[fig3_idx].axvline(min_idx3.values[0], color='r', linewidth=2, linestyle='--')
+    # axs[fig3_idx].axvline(min_idx3.values[0], color='r', linewidth=2, linestyle='--')
     axs[fig3_idx].set_ylabel(r'$T_{p}$ $(K)$')
     
     # Density 
@@ -217,11 +220,12 @@ for event_num in range(len(sample)):
     min_idx4 = window4[window4.values==max(window4)].index
     try:
         timestamps_lst.append(min_idx4[0])
+        axs[fig4_idx].axvline(min_idx4.values[0], color='r', linewidth=2, linestyle='--')
     except IndexError as er:
         print(er)
     axs[fig4_idx].plot(omni_data['N1800'])
     axs[fig4_idx].axvspan(st4, et4, facecolor='#FFCC66', alpha=0.5)
-    axs[fig4_idx].axvline(min_idx4.values[0], color='r', linewidth=2, linestyle='--')
+    # axs[fig4_idx].axvline(min_idx4.values[0], color='r', linewidth=2, linestyle='--')
     axs[fig4_idx].set_ylabel(r'$n_{p}$ $(cm^{-3})$')
     
     # V 
@@ -233,11 +237,12 @@ for event_num in range(len(sample)):
     min_idx5 = window5[window5.values==max(window5)].index
     try:
         timestamps_lst.append(min_idx5[0])
+        axs[fig5_idx].axvline(min_idx5.values[0], color='r', linewidth=2, linestyle='--')
     except IndexError as er:
         print(er)
     axs[fig5_idx].plot(omni_data['V1800'])
     axs[fig5_idx].axvspan(st5, et5, facecolor='#FFCC66', alpha=0.5)
-    axs[fig5_idx].axvline(min_idx5.values[0], color='r', linewidth=2, linestyle='--')
+    # axs[fig5_idx].axvline(min_idx5.values[0], color='r', linewidth=2, linestyle='--')
     axs[fig5_idx].set_ylabel('$V_{sw}$\n$(km.s^{-1})$')
     
     # P 
@@ -249,11 +254,12 @@ for event_num in range(len(sample)):
     min_idx6 = window6[window6.values==max(window6)].index
     try:
         timestamps_lst.append(min_idx6[0])
+        axs[fig6_idx].axvline(min_idx6.values[0], color='r', linewidth=2, linestyle='--')
     except IndexError as er:
         print(er)
     axs[fig6_idx].plot(omni_data['Pressure1800'])
     axs[fig6_idx].axvspan(st6, et6, facecolor='#FFCC66', alpha=0.5)
-    axs[fig6_idx].axvline(min_idx6.values[0], color='r', linewidth=2, linestyle='--')
+    # axs[fig6_idx].axvline(min_idx6.values[0], color='r', linewidth=2, linestyle='--')
     axs[fig6_idx].set_ylabel('P (nPa)')
     
     # Dst 
@@ -265,11 +271,11 @@ for event_num in range(len(sample)):
     min_idx7 = window7[window7.values==min(window7)].index
     try:
         timestamps_lst.append(min_idx7[0])
+        axs[fig7_idx].axvline(min_idx7.values[0], color='r', linewidth=2, linestyle='--')
     except IndexError as er:
         print(er)
     axs[fig7_idx].plot(omni_data['DST1800'])
     axs[fig7_idx].axvspan(st7, et7, facecolor='#FFCC66', alpha=0.5)
-    axs[fig7_idx].axvline(min_idx7.values[0], color='r', linewidth=2, linestyle='--')
     axs[fig7_idx].set_ylabel('Dst (nT)')
     
     # Taking the average of those timestamps 
@@ -387,7 +393,10 @@ for event_num in range(len(sample)):
             PA_tran_time_hours = (PA_est_trans_time.components.days * 24) + (PA_est_trans_time.components.minutes / 60) + (PA_est_trans_time.components.seconds / 3600)
             
             
-
+            # BUGS FOUND:
+                # PA_est_ICME_datetime: it produces several timestamps per event 
+                # ICME_Datetime: missing 
+                # ICME_Speed: missing 
             final_table = final_table.append({'CME_Datetime': sample.CME_Datetime[event_num], 
                                               'W': sample['W'][event_num], 
                                               'CME_Speed': sample['CME_Speed'][event_num], 

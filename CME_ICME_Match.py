@@ -504,6 +504,300 @@ plt.savefig(os.path.join(save_path, 'Output_plots' + '/', 'ChP_hist_err.png'))
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 
 
+# In[]: Try the 'trendet' package 
+start_datetime = datetime(2017, 9, 6)
+end_datetime = datetime(2017, 9, 13)
+omni_data_raw = get_omni_hr(start_datetime, end_datetime)
+# In[]: Plot the Dst index 
+plt.figure(figsize=(15,3))
+plt.plot(omni_data['DST1800'])
+plt.xlabel('Datetime')
+plt.ylabel('Dst (nT)')
+plt.xlim(omni_data.index[0], omni_data.index[-1])
+plt.show()
+# In[]: --- 
+omni_data = omni_data_raw.filter(omni_data_raw.columns[[1,6,7,8,9,13,25]])
+omni_data = omni_data.astype('float64')
+
+import trendet
+import seaborn as sns
+sns.set()
+
+trend_type = 'down'
+
+if trend_type == 'up':
+    
+    res = trendet.identify_df_trends(df=omni_data, column='DST1800', window_size=5, identify=trend_type)
+    res.reset_index(inplace=True)
+    
+    plt.figure(figsize=(15,3))
+
+    ax = sns.lineplot(x=res['Time'], y=res['DST1800'])
+    
+    labels = res['Up Trend'].dropna().unique().tolist()
+    
+    for label in labels:
+        sns.lineplot(x=res[res['Up Trend'] == label]['Time'],
+                     y=res[res['Up Trend'] == label]['DST1800'],
+                     color='green')
+    
+        ax.axvspan(res[res['Up Trend'] == label]['Time'].iloc[0],
+                   res[res['Up Trend'] == label]['Time'].iloc[-1],
+                   alpha=0.2,
+                   color='green')
+    
+    ax.set(xlim=(omni_data['Time'].iloc[0], omni_data['Time'].iloc[-1]))
+    plt.gcf().autofmt_xdate()
+    plt.show()
+
+
+elif trend_type == 'down':
+    
+    res = trendet.identify_df_trends(df=omni_data, column='DST1800', window_size=5, identify=trend_type)
+    res.reset_index(inplace=True)
+    
+    plt.figure(figsize=(15,3))
+
+    ax = sns.lineplot(x=res['Time'], y=res['DST1800'])
+    
+    labels = res['Down Trend'].dropna().unique().tolist()
+    
+    for label in labels:
+        sns.lineplot(x=res[res['Down Trend'] == label]['Time'],
+                      y=res[res['Down Trend'] == label]['DST1800'],
+                      color='red')
+    
+        ax.axvspan(res[res['Down Trend'] == label]['Time'].iloc[0],
+                    res[res['Down Trend'] == label]['Time'].iloc[-1],
+                    alpha=0.2,
+                    color='red')
+    
+    ax.set(xlim=(omni_data['Time'].iloc[0], omni_data['Time'].iloc[-1]))
+    plt.gcf().autofmt_xdate()
+    plt.show()
+
+elif trend_type == 'both':
+
+    res = trendet.identify_df_trends(df=omni_data, column='DST1800', window_size=5, identify=trend_type)
+    res.reset_index(inplace=True)
+    
+    plt.figure(figsize=(15,3))
+
+    ax = sns.lineplot(x=res['Time'], y=res['DST1800'])
+    
+    labels = res['Up Trend'].dropna().unique().tolist()
+    
+    for label in labels:
+        sns.lineplot(x=res[res['Up Trend'] == label]['Time'],
+                     y=res[res['Up Trend'] == label]['DST1800'],
+                     color='green')
+    
+        ax.axvspan(res[res['Up Trend'] == label]['Time'].iloc[0],
+                   res[res['Up Trend'] == label]['Time'].iloc[-1],
+                   alpha=0.2,
+                   color='green')
+    
+    labels = res['Down Trend'].dropna().unique().tolist()
+    
+    for label in labels:
+        sns.lineplot(x=res[res['Down Trend'] == label]['Time'],
+                      y=res[res['Down Trend'] == label]['DST1800'],
+                      color='red')
+    
+        ax.axvspan(res[res['Down Trend'] == label]['Time'].iloc[0],
+                    res[res['Down Trend'] == label]['Time'].iloc[-1],
+                    alpha=0.2,
+                    color='red')
+    
+    ax.set(xlim=(omni_data['Time'].iloc[0], omni_data['Time'].iloc[-1]))
+    plt.gcf().autofmt_xdate()
+    plt.show()
+
+# In[]: Subplot for comparison between up and down trends 
+omni_data = omni_data_raw.filter(omni_data_raw.columns[[1,6,7,8,9,13,25]])
+omni_data = omni_data.astype('float64')
+
+sns.set()
+fig, axes = plt.subplots(3, 1, sharex=True, figsize=(15,7))
+fig.suptitle('Comparison between trends for the Dst index')
+
+res = trendet.identify_df_trends(df=omni_data, column='DST1800', window_size=5, identify='both')
+res.reset_index(inplace=True)
+
+# Up trend 
+sns.lineplot(ax=axes[0], x=res['Time'], y=res['DST1800'])
+labels = res['Up Trend'].dropna().unique().tolist()
+for label in labels:
+    sns.lineplot(ax=axes[0], x=res[res['Up Trend'] == label]['Time'],
+                 y=res[res['Up Trend'] == label]['DST1800'], color='green')
+    axes[0].axvspan(res[res['Up Trend'] == label]['Time'].iloc[0],
+               res[res['Up Trend'] == label]['Time'].iloc[-1],
+               alpha=0.2, color='green')
+axes[0].set(xlim=(omni_data['Time'].iloc[0], omni_data['Time'].iloc[-1]))
+axes[0].set_title('Up Trend')
+
+# Down trend 
+sns.lineplot(ax=axes[1], x=res['Time'], y=res['DST1800'])
+labels = res['Down Trend'].dropna().unique().tolist()
+for label in labels:
+    sns.lineplot(ax=axes[1], x=res[res['Down Trend'] == label]['Time'],
+                  y=res[res['Down Trend'] == label]['DST1800'], color='red')
+    axes[1].axvspan(res[res['Down Trend'] == label]['Time'].iloc[0],
+                res[res['Down Trend'] == label]['Time'].iloc[-1],
+                alpha=0.2, color='red')
+axes[1].set(xlim=(omni_data['Time'].iloc[0], omni_data['Time'].iloc[-1]))
+axes[1].set_title('Down Trend')
+
+# Both trends 
+sns.lineplot(ax=axes[2], x=res['Time'], y=res['DST1800'])
+labels = res['Up Trend'].dropna().unique().tolist()
+for label in labels:
+    sns.lineplot(ax=axes[2], x=res[res['Up Trend'] == label]['Time'],
+                 y=res[res['Up Trend'] == label]['DST1800'], color='green')
+    axes[2].axvspan(res[res['Up Trend'] == label]['Time'].iloc[0],
+               res[res['Up Trend'] == label]['Time'].iloc[-1],
+               alpha=0.2, color='green')
+    
+labels = res['Down Trend'].dropna().unique().tolist()
+for label in labels:
+    sns.lineplot(ax=axes[2], x=res[res['Down Trend'] == label]['Time'],
+                  y=res[res['Down Trend'] == label]['DST1800'], color='red')
+    axes[2].axvspan(res[res['Down Trend'] == label]['Time'].iloc[0],
+                res[res['Down Trend'] == label]['Time'].iloc[-1],
+                alpha=0.2, color='red')
+    
+axes[2].set(xlim=(omni_data['Time'].iloc[0], omni_data['Time'].iloc[-1]))
+axes[2].set_title('Both Trends')
+
+# In[]: Subplot for V, n, T, Dst
+sns.set(style='darkgrid')
+fig, axes = plt.subplots(4, 1, sharex=True, figsize=(15,10))
+fig.suptitle('Comparison between trends for OMNI hourly data')
+
+# Plasma speed 
+omni_data = omni_data_raw.filter(omni_data_raw.columns[[1,6,7,8,9,13,25]]).astype('float64')
+v = trendet.identify_df_trends(df=omni_data, column='V1800', window_size=5, identify='both')
+v.reset_index(inplace=True)
+sns.lineplot(ax=axes[0], x=v['Time'], y=v['V1800'])
+labels = v['Up Trend'].dropna().unique().tolist()
+for label in labels:
+    sns.lineplot(ax=axes[0], x=v[v['Up Trend'] == label]['Time'], 
+                 y=v[v['Up Trend'] == label]['V1800'], color='green')
+    axes[0].axvspan(v[v['Up Trend'] == label]['Time'].iloc[0], 
+                    v[v['Up Trend'] == label]['Time'].iloc[-1],
+                    alpha=0.2, color='green')   
+labels = v['Down Trend'].dropna().unique().tolist()
+for label in labels:
+    sns.lineplot(ax=axes[0], x=v[v['Down Trend'] == label]['Time'], 
+                 y=v[v['Down Trend'] == label]['V1800'], color='red')
+    axes[0].axvspan(v[v['Down Trend'] == label]['Time'].iloc[0], 
+                    v[v['Down Trend'] == label]['Time'].iloc[-1],
+                    alpha=0.2, color='red')
+axes[0].set(xlim=(v['Time'].iloc[0], v['Time'].iloc[-1]))
+axes[0].set_ylabel('V (km/s)')
+
+# Plasma density 
+omni_data = omni_data_raw.filter(omni_data_raw.columns[[1,6,7,8,9,13,25]]).astype('float64')
+n = trendet.identify_df_trends(df=omni_data, column='N1800', window_size=5, identify='both')
+n.reset_index(inplace=True)
+sns.lineplot(ax=axes[1], x=n['Time'], y=n['N1800'])
+labels = n['Up Trend'].dropna().unique().tolist()
+for label in labels:
+    sns.lineplot(ax=axes[1], x=n[n['Up Trend'] == label]['Time'], 
+                 y=n[n['Up Trend'] == label]['N1800'], color='green')
+    axes[1].axvspan(n[n['Up Trend'] == label]['Time'].iloc[0], 
+                    n[n['Up Trend'] == label]['Time'].iloc[-1],
+                    alpha=0.2, color='green')   
+labels = n['Down Trend'].dropna().unique().tolist()
+for label in labels:
+    sns.lineplot(ax=axes[1], x=n[n['Down Trend'] == label]['Time'], 
+                 y=n[n['Down Trend'] == label]['N1800'], color='red')
+    axes[1].axvspan(n[n['Down Trend'] == label]['Time'].iloc[0], 
+                    n[n['Down Trend'] == label]['Time'].iloc[-1],
+                    alpha=0.2, color='red')
+axes[1].set(xlim=(n['Time'].iloc[0], n['Time'].iloc[-1]))
+axes[1].set_ylabel('n (#/cm3)')
+
+# Plasma temperature 
+omni_data = omni_data_raw.filter(omni_data_raw.columns[[1,6,7,8,9,13,25]]).astype('float64')
+T = trendet.identify_df_trends(df=omni_data, column='T1800', window_size=5, identify='both')
+T.reset_index(inplace=True)
+sns.lineplot(ax=axes[2], x=T['Time'], y=T['T1800'])
+labels = T['Up Trend'].dropna().unique().tolist()
+for label in labels:
+    sns.lineplot(ax=axes[2], x=T[T['Up Trend'] == label]['Time'], 
+                 y=T[T['Up Trend'] == label]['T1800'], color='green')
+    axes[2].axvspan(T[T['Up Trend'] == label]['Time'].iloc[0], 
+                    T[T['Up Trend'] == label]['Time'].iloc[-1],
+                    alpha=0.2, color='green')   
+labels = T['Down Trend'].dropna().unique().tolist()
+for label in labels:
+    sns.lineplot(ax=axes[2], x=T[T['Down Trend'] == label]['Time'], 
+                 y=T[T['Down Trend'] == label]['T1800'], color='red')
+    axes[2].axvspan(T[T['Down Trend'] == label]['Time'].iloc[0], 
+                    T[T['Down Trend'] == label]['Time'].iloc[-1],
+                    alpha=0.2, color='red')
+axes[2].set(xlim=(T['Time'].iloc[0], T['Time'].iloc[-1]))
+axes[2].set_yscale('log')
+axes[2].set_ylabel('T (K)')
+
+# Dst 
+omni_data = omni_data_raw.filter(omni_data_raw.columns[[1,6,7,8,9,13,25]]).astype('float64')
+dst = trendet.identify_df_trends(df=omni_data, column='DST1800', window_size=5, identify='both')
+dst.reset_index(inplace=True)
+sns.lineplot(ax=axes[3], x=dst['Time'], y=dst['DST1800'])
+labels = dst['Up Trend'].dropna().unique().tolist()
+for label in labels:
+    sns.lineplot(ax=axes[3], x=dst[dst['Up Trend'] == label]['Time'], 
+                 y=dst[dst['Up Trend'] == label]['DST1800'], color='green')
+    axes[3].axvspan(dst[dst['Up Trend'] == label]['Time'].iloc[0], 
+                    dst[dst['Up Trend'] == label]['Time'].iloc[-1],
+                    alpha=0.2, color='green')   
+labels = dst['Down Trend'].dropna().unique().tolist()
+for label in labels:
+    sns.lineplot(ax=axes[3], x=dst[dst['Down Trend'] == label]['Time'], 
+                 y=dst[dst['Down Trend'] == label]['DST1800'], color='red')
+    axes[3].axvspan(dst[dst['Down Trend'] == label]['Time'].iloc[0], 
+                    dst[dst['Down Trend'] == label]['Time'].iloc[-1],
+                    alpha=0.2, color='red')
+axes[3].set(xlim=(dst['Time'].iloc[0], dst['Time'].iloc[-1]))
+axes[3].set_ylabel('Dst (nT)')
+
+# NEXT: FIND THE TIME INDEX AT WHICH THE D-TREND OF DST AND N = U-TREND OF V AND T 
+omni_trends = DataFrame({'Datetime': omni_data['Time'], 
+                         'V': omni_data['V1800'], 
+                         'n': omni_data['N1800'], 
+                         'T': omni_data['T1800'], 
+                         'Dst': omni_data['DST1800'], 
+                         'U-trend_V': v['Up Trend'], 
+                         'D-trend_V': v['Down Trend'], 
+                         'U-trend_n': n['Up Trend'], 
+                         'D-trend_n': n['Down Trend'], 
+                         'U-trend_T': T['Up Trend'], 
+                         'D-trend_T': T['Down Trend'], 
+                         'U-trend_Dst': dst['Up Trend'], 
+                         'D-trend_Dst': dst['Down Trend']})
+
+omni_trends = omni_trends.set_index('Datetime')
+
+V_T = omni_trends[omni_trends['U-trend_V'].values == omni_trends['U-trend_T'].values].index.tolist()
+V_Dst = omni_trends[omni_trends['U-trend_V'].values == omni_trends['D-trend_Dst'].values].index.tolist()
+T_Dst = omni_trends[omni_trends['U-trend_T'].values == omni_trends['D-trend_Dst'].values].index.tolist()
+
+# Find the intersection timestamp 
+intersection = (set(V_T).intersection(T_Dst)).intersection(V_Dst)
+intersection = [*intersection,]
+
+# Plot a dashed black line representing the estimated CME arrival time 
+for ax in axes:
+    ax.axvline(intersection[-1], color='k', linewidth=2, linestyle='--')
+
+plt.show()
+
+# In[]: >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 
+
 # In[]: --- Predict the arrival time of a CME event from the sample data 
 # event_num = 176
 

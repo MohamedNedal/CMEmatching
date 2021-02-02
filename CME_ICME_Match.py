@@ -505,15 +505,15 @@ plt.savefig(os.path.join(save_path, 'Output_plots' + '/', 'ChP_hist_err.png'))
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 
 
 # In[]: Try the 'trendet' package 
-start_datetime = datetime(2017, 9, 6)
-end_datetime = datetime(2017, 9, 13)
+start_datetime = datetime(2015, 6, 22)
+end_datetime = datetime(2015, 6, 29)
 omni_data_raw = get_omni_hr(start_datetime, end_datetime)
 # In[]: Plot the Dst index 
 plt.figure(figsize=(15,3))
-plt.plot(omni_data['DST1800'])
+plt.plot(omni_data_raw['DST1800'])
 plt.xlabel('Datetime')
 plt.ylabel('Dst (nT)')
-plt.xlim(omni_data.index[0], omni_data.index[-1])
+plt.xlim(omni_data_raw.index[0], omni_data_raw.index[-1])
 plt.show()
 # In[]: --- 
 omni_data = omni_data_raw.filter(omni_data_raw.columns[[1,6,7,8,9,13,25]])
@@ -523,14 +523,14 @@ import trendet
 import seaborn as sns
 sns.set()
 
-trend_type = 'down'
+trend_type = 'both'
 
 if trend_type == 'up':
     
     res = trendet.identify_df_trends(df=omni_data, column='DST1800', window_size=5, identify=trend_type)
     res.reset_index(inplace=True)
     
-    plt.figure(figsize=(15,3))
+    fig = plt.figure(figsize=(15,3))
 
     ax = sns.lineplot(x=res['Time'], y=res['DST1800'])
     
@@ -556,7 +556,7 @@ elif trend_type == 'down':
     res = trendet.identify_df_trends(df=omni_data, column='DST1800', window_size=5, identify=trend_type)
     res.reset_index(inplace=True)
     
-    plt.figure(figsize=(15,3))
+    fig = plt.figure(figsize=(15,3))
 
     ax = sns.lineplot(x=res['Time'], y=res['DST1800'])
     
@@ -581,7 +581,7 @@ elif trend_type == 'both':
     res = trendet.identify_df_trends(df=omni_data, column='DST1800', window_size=5, identify=trend_type)
     res.reset_index(inplace=True)
     
-    plt.figure(figsize=(15,3))
+    fig = plt.figure(figsize=(15,3))
 
     ax = sns.lineplot(x=res['Time'], y=res['DST1800'])
     
@@ -610,6 +610,9 @@ elif trend_type == 'both':
                     color='red')
     
     ax.set(xlim=(omni_data['Time'].iloc[0], omni_data['Time'].iloc[-1]))
+    ax.set_ylabel('Dst (nT)')
+    ax.set_xlabel('Date')
+    fig.tight_layout()
     plt.gcf().autofmt_xdate()
     plt.show()
 
@@ -621,7 +624,7 @@ sns.set()
 fig, axes = plt.subplots(3, 1, sharex=True, figsize=(15,7))
 fig.suptitle('Comparison between trends for the Dst index')
 
-res = trendet.identify_df_trends(df=omni_data, column='DST1800', window_size=5, identify='both')
+res = trendet.identify_df_trends(df=omni_data, column='DST1800', window_size=3, identify='both')
 res.reset_index(inplace=True)
 
 # Up trend 
@@ -635,6 +638,7 @@ for label in labels:
                alpha=0.2, color='green')
 axes[0].set(xlim=(omni_data['Time'].iloc[0], omni_data['Time'].iloc[-1]))
 axes[0].set_title('Up Trend')
+axes[0].set_ylabel('Dst (nT)')
 
 # Down trend 
 sns.lineplot(ax=axes[1], x=res['Time'], y=res['DST1800'])
@@ -647,6 +651,7 @@ for label in labels:
                 alpha=0.2, color='red')
 axes[1].set(xlim=(omni_data['Time'].iloc[0], omni_data['Time'].iloc[-1]))
 axes[1].set_title('Down Trend')
+axes[1].set_ylabel('Dst (nT)')
 
 # Both trends 
 sns.lineplot(ax=axes[2], x=res['Time'], y=res['DST1800'])
@@ -668,10 +673,14 @@ for label in labels:
     
 axes[2].set(xlim=(omni_data['Time'].iloc[0], omni_data['Time'].iloc[-1]))
 axes[2].set_title('Both Trends')
+axes[2].set_ylabel('Dst (nT)')
+axes[2].set_xlabel('Date')
+fig.tight_layout()
+plt.show()
 
 # In[]: Subplot for V, n, T, Dst
 sns.set(style='darkgrid')
-fig, axes = plt.subplots(4, 1, sharex=True, figsize=(15,10))
+fig, axes = plt.subplots(4, 1, sharex=True, figsize=(15,7))
 fig.suptitle('Comparison between trends for OMNI hourly data')
 
 # Plasma speed 
@@ -698,7 +707,7 @@ axes[0].set_ylabel('V (km/s)')
 
 # Plasma density 
 omni_data = omni_data_raw.filter(omni_data_raw.columns[[1,6,7,8,9,13,25]]).astype('float64')
-n = trendet.identify_df_trends(df=omni_data, column='N1800', window_size=5, identify='both')
+n = trendet.identify_df_trends(df=omni_data, column='N1800', window_size=3, identify='both')
 n.reset_index(inplace=True)
 sns.lineplot(ax=axes[1], x=n['Time'], y=n['N1800'])
 labels = n['Up Trend'].dropna().unique().tolist()
@@ -743,7 +752,7 @@ axes[2].set_ylabel('T (K)')
 
 # Dst 
 omni_data = omni_data_raw.filter(omni_data_raw.columns[[1,6,7,8,9,13,25]]).astype('float64')
-dst = trendet.identify_df_trends(df=omni_data, column='DST1800', window_size=5, identify='both')
+dst = trendet.identify_df_trends(df=omni_data, column='DST1800', window_size=3, identify='both')
 dst.reset_index(inplace=True)
 sns.lineplot(ax=axes[3], x=dst['Time'], y=dst['DST1800'])
 labels = dst['Up Trend'].dropna().unique().tolist()
@@ -780,22 +789,54 @@ omni_trends = DataFrame({'Datetime': omni_data['Time'],
 
 omni_trends = omni_trends.set_index('Datetime')
 
-V_T = omni_trends[omni_trends['U-trend_V'].values == omni_trends['U-trend_T'].values].index.tolist()
-V_Dst = omni_trends[omni_trends['U-trend_V'].values == omni_trends['D-trend_Dst'].values].index.tolist()
-T_Dst = omni_trends[omni_trends['U-trend_T'].values == omni_trends['D-trend_Dst'].values].index.tolist()
+# ------------------------------------------------------ 
+V_n = omni_trends[['U-trend_V', 'D-trend_n']]
+V_n.dropna(inplace=True)
+# ------------------------------------------------------ 
+V_T = omni_trends[['U-trend_V', 'U-trend_T']]
+V_T.dropna(inplace=True)
+# ------------------------------------------------------ 
+n_T = omni_trends[['D-trend_n', 'U-trend_T']]
+n_T.dropna(inplace=True)
+# ------------------------------------------------------ 
+V_Dst = omni_trends[['U-trend_V', 'U-trend_Dst']]
+V_Dst.dropna(inplace=True)
+# ------------------------------------------------------ 
+n_Dst = omni_trends[['D-trend_n', 'U-trend_Dst']]
+n_Dst.dropna(inplace=True)
+# ------------------------------------------------------ 
+T_Dst = omni_trends[['U-trend_T', 'U-trend_Dst']]
+T_Dst.dropna(inplace=True)
+# ------------------------------------------------------ 
 
 # Find the intersection timestamp 
-intersection = (set(V_T).intersection(T_Dst)).intersection(V_Dst)
+intersection = set(set(set(set(set(V_n.index).intersection(V_T.index)).intersection(n_T.index)).intersection(V_Dst.index)).intersection(n_Dst.index)).intersection(T_Dst.index)
 intersection = [*intersection,]
 
 # Plot a dashed black line representing the estimated CME arrival time 
 for ax in axes:
     ax.axvline(intersection[-1], color='k', linewidth=2, linestyle='--')
 
+fig.tight_layout()
 plt.show()
 
 # In[]: >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

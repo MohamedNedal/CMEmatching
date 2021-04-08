@@ -12,7 +12,7 @@ from pandas import read_excel, DataFrame
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 import os.path
-from necessary_functions import G2001, get_omni_hr, using_trendet_hr, PA, ChP
+from necessary_functions import G2001, get_omni_hr, get_omni_min, using_trendet_hr, using_trendet_min, PA, PA2_min, ChP, ChP_min
 from statistics import mean
 # Print out the data directory path and their sizes 
 from heliopy.data import helper as heliohelper
@@ -25,10 +25,10 @@ warnings.filterwarnings('ignore')
 
 # In[]: Establishing the output folder 
 save_path = 'D:/Study/Academic/Research/Master Degree/Master Work/Software/Codes/Python/Heliopy Examples/auto_examples_python/'
-try:
-    os.mkdir(save_path + 'Output_plots')
-except OSError as error:
-    print(error)
+try: os.mkdir(save_path + 'Output_plots')
+except OSError as error: print(error)
+try: os.mkdir(save_path + 'omni_data_for_events_in_paper')
+except OSError as error: print(error)
 
 # In[]: --- 
 print('\nFinding the ICMEs in OMNI data and match them with the CMEs from SOHO-LASCO')
@@ -57,6 +57,7 @@ cols = sample.columns.insert(sample.shape[1]+1, 'PA_trans_time_hrs')
 cols = cols.insert(len(cols)+1, 'PA_est_ICME_datetime')
 cols = cols.insert(len(cols)+1, 'ChP_trans_time_hrs')
 cols = cols.insert(len(cols)+1, 'ChP_est_ICME_datetime')
+cols = cols.insert(len(cols)+1, 'trendet_est_ICME_datetime')
 
 final_table = DataFrame(columns=cols)
 
@@ -65,7 +66,7 @@ final_table = DataFrame(columns=cols)
 # matplotlib.use('Agg')
 # plt.ioff()
 
-for event_num in range(len(sample) ):
+for event_num in range(len(sample)):
         
     arrival_datetime = G2001(sample.CME_Datetime[event_num], sample.CME_Speed[event_num])
     
@@ -95,6 +96,10 @@ for event_num in range(len(sample) ):
                             end_window.minute,
                             end_window.second)
     
+    # Example 
+    # start_datetime = datetime(2017, 9, 7)
+    # end_datetime = datetime(2017, 9, 14)
+    
     omni_data = get_omni_hr(start_datetime, end_datetime)
     
     # ------------------------------------------------------ 
@@ -106,10 +111,7 @@ for event_num in range(len(sample) ):
     chp_ICME_est_arrival_time, arrival_time_ChP = ChP(omni_data, sample, event_num)
     
     # using the 'trendet' package 
-    '''
-        ADD EXCEPTIONS FOR NOT FINDING UP_TREND OR DOWN_TREND COLUMNS ... 
-    '''
-    # arrival_time_trendet = using_trendet_hr(omni_data)
+    arrival_time_trendet = using_trendet_min(get_omni_min(start_datetime, end_datetime))
 
     # ---------------------------------------------------------------------------- 
     
@@ -124,7 +126,8 @@ for event_num in range(len(sample) ):
                                       'PA_trans_time_hrs': arrival_time_PA, 
                                       'PA_est_ICME_datetime': AVG, 
                                       'ChP_trans_time_hrs': arrival_time_ChP, 
-                                      'ChP_est_ICME_datetime': chp_ICME_est_arrival_time}, 
+                                      'ChP_est_ICME_datetime': chp_ICME_est_arrival_time, 
+                                      'trendet_est_ICME_datetime': arrival_time_trendet}, 
                                      ignore_index=True)
                         
 
@@ -216,87 +219,423 @@ plt.tight_layout()
 plt.show()
 
 # In[]: >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 
+# >>>>>>>>>>>>>>> EVENTS LIST >>>>>>>>>>>>>>>>>>>> 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 
+df = read_excel('train_test_final_dataset.xlsx', sheet_name='Filtered')
+
+# Create an empty table to be filled with the CME info and its estimated transit time 
+final_table = []
+
+# Finalize the output  
+cols = df.columns.insert(df.shape[1]+1, 'PA_trans_time')
+cols = cols.insert(len(cols)+1, 'PA_est_ICME_datetime')
+cols = cols.insert(len(cols)+1, 'ChP_trans_time')
+cols = cols.insert(len(cols)+1, 'ChP_est_ICME_datetime')
+
+final_table = DataFrame(columns=cols)
+
+# To prevent plots from showing up for more speed 
+import matplotlib
+matplotlib.use('Agg')
+plt.ioff()
+
+for event in range(len(df)):
+
+    tt = G2001(df['CME_Datetime'][event], df['CME_Speed'][event])
+    
+    start_window = tt - timedelta(hours=24) # hours=11.04 
+    end_window = tt + timedelta(hours=24) # hours=11.04 
+    
+    start_datetime = datetime(start_window.year,
+                              start_window.month,
+                              start_window.day,
+                              start_window.hour,
+                              start_window.minute,
+                              start_window.second)
+    
+    end_datetime = datetime(end_window.year,
+                            end_window.month,
+                            end_window.day,
+                            end_window.hour,
+                            end_window.minute,
+                            end_window.second)
+    
+    omni_data = get_omni_min(start_datetime, end_datetime)
+    
+    omni_data = omni_data.filter(omni_data[['F', 'BX_GSE', 'BY_GSM', 'BZ_GSM', 'flow_speed', 'proton_density', 'Pressure', 'T', 'NaNp_Ratio', 'Beta', 'Mach_num', 'Mgs_mach_num', 'SYM_H']])
+    omni_data = omni_data.astype('float64')
+    
+    # using 'parametric' approach 
+    avg, pa_tt = PA2_min(omni_data, df['CME_Datetime'][event], tt, -10)
+    
+    # using the 'change-point' method 
+    chp_ICME_est_arrival_time, arrival_time_ChP = ChP_min(omni_data, df['CME_Datetime'][event])
+    
+    dt_G2001 = df['ICME_Datetime'][event] - tt
+    dt_PA = df['ICME_Datetime'][event] - avg
+    
+    print('\nCME launched on:', df['CME_Datetime'][event])
+    print('Real arrival time is:', df['ICME_Datetime'][event])
+    print('G2001 arrival time is:', tt)
+    print('PA arrival time is:', avg)
+    print('G2001 Error is:', 
+          abs(dt_G2001.components.days), 'days,', 
+          abs(dt_G2001.components.hours), 'hours,', 
+          abs(dt_G2001.components.minutes), 'minutes.')
+    print('PA Error is:', 
+          abs(dt_PA.components.days), 'days,', 
+          abs(dt_PA.components.hours), 'hours,', 
+          abs(dt_PA.components.minutes), 'minutes.')
+    
+    final_table = final_table.append({'CME_Datetime': df['CME_Datetime'][event], 
+                                  'W': df['W'][event], 
+                                  'CME_Speed': df['CME_Speed'][event], 
+                                  'a': df['a'][event], 
+                                  'MPA': df['MPA'][event], 
+                                  'Lat': df['Lat'][event], 
+                                  'Lon': df['Lon'][event], 
+                                  'Trans_Time': df['Trans_Time'][event], 
+                                  'ICME_Datetime': df['ICME_Datetime'][event], 
+                                  'PA_trans_time': pa_tt, 
+                                  'PA_est_ICME_datetime': avg, 
+                                  'ChP_trans_time': arrival_time_ChP, 
+                                  'ChP_est_ICME_datetime': chp_ICME_est_arrival_time}, 
+                                  ignore_index=True)
+    
+    fig, axs = plt.subplots(11, 1, figsize=(10,30), sharex=True)
+    
+    axs[0].plot(omni_data['F'])
+    axs[0].set_ylabel('B_t (nT)')
+    
+    axs[1].plot(omni_data['BX_GSE'], label='Bx GSE')
+    axs[1].plot(omni_data['BY_GSM'], label='By GSM')
+    axs[1].plot(omni_data['BZ_GSM'], label='Bz GSM')
+    
+    axs[2].plot(omni_data['flow_speed'])
+    axs[2].set_ylabel('V (km/s)')
+    
+    axs[3].plot(omni_data['proton_density'])
+    axs[3].set_ylabel('n (/cm3)')
+    
+    axs[4].plot(omni_data['Pressure'])
+    axs[4].set_ylabel('P (nPa)')
+    
+    axs[5].plot(omni_data['T'], label='T_P')
+    # To check this condition Tp/Texp < 0.5 --> signature of ICME (MC) 
+    if mean(omni_data['flow_speed']) > 500:
+        # for the high-speed wind 
+        Texp = ((0.031 * omni_data['flow_speed']) - 4.39)**2
+    else:
+        # for the high-speed wind 
+        Texp = ((0.77 * omni_data['flow_speed']) - 265)**2
+    Texp.rename('Texp', inplace=True)
+    axs[5].plot(Texp, label='T_{exp}')
+    axs[5].set_yscale('log')
+    
+    axs[6].plot(omni_data['NaNp_Ratio'])
+    axs[6].set_ylabel('Na/Np\nratio')
+    axs[6].set_yscale('log')
+    
+    axs[7].plot(omni_data['Beta'])
+    axs[7].set_ylabel('Plasma\nBeta')
+    axs[7].set_yscale('log')
+    
+    axs[8].plot(omni_data['Mach_num'])
+    axs[8].set_ylabel('Mach num')
+    
+    axs[9].plot(omni_data['Mgs_mach_num'])
+    axs[9].set_ylabel('Magnetonic\nMach num')
+    
+    axs[10].plot(omni_data['SYM_H'])
+    axs[10].set_ylabel('Dst (nT)')
+    
+    for ax in axs:
+        ax.axvline(df['ICME_Datetime'][event], color='green', alpha=0.5, linewidth=2, linestyle='--', label='Real')
+        ax.axvline(tt, color='tomato', alpha=0.5, linewidth=2, linestyle='--', label='G2001')
+        ax.axvline(avg, color='black', alpha=0.5, linewidth=2, linestyle='--', label='PA')
+        ax.legend(loc='upper right', frameon=False, prop={'size': 10})
+        ax.set_xlim([start_datetime, end_datetime])
+        # ax.grid()
+    
+    plt.xlabel('Date')
+    fig.tight_layout()
+    sta = str(start_datetime.year)+str(start_datetime.month)+str(start_datetime.day)+str(start_datetime.hour)+str(start_datetime.minute)+str(start_datetime.second)
+    end = str(end_datetime.year)+str(end_datetime.month)+str(end_datetime.day)+str(end_datetime.hour)+str(end_datetime.minute)+str(end_datetime.second)
+    # plt.savefig(os.path.join(save_path, 'omni_data_for_events_in_paper' + '/', 'OMNI_Data_'+sta+'--'+end+'.png'), dpi=300)
+    plt.show()
+
+# In[]: --- plot hourly data 
+omni_data = omni_data.filter(omni_data[['F1800', 'BX_GSE1800', 'BY_GSE1800', 'BZ_GSE1800', 'V1800', 'N1800', 'Pressure1800', 'T1800', 'Ratio1800', 'Beta1800', 'Mach_num1800', 'Mgs_mach_num1800', 'DST1800']])
+omni_data = omni_data.astype('float64')
+
+fig, axs = plt.subplots(11, 1, figsize=(10,30), dpi=100, sharex=True)
+
+axs[0].plot(omni_data['F1800'])
+axs[0].set_ylabel('B_t (nT)')
+
+axs[1].plot(omni_data['BX_GSE1800'], label='Bx GSE')
+axs[1].plot(omni_data['BY_GSE1800'], label='By GSM')
+axs[1].plot(omni_data['BZ_GSE1800'], label='Bz GSM')
+
+axs[2].plot(omni_data['V1800'])
+axs[2].set_ylabel('V (km/s)')
+
+axs[3].plot(omni_data['N1800'])
+axs[3].set_ylabel('n (/cm3)')
+
+axs[4].plot(omni_data['Pressure1800'])
+axs[4].set_ylabel('P (nPa)')
+
+axs[5].plot(omni_data['T1800'], label='T_P')
+# To check this condition Tp/Texp < 0.5 --> signature of ICME (MC) 
+if mean(omni_data['V1800']) > 500:
+    # for the high-speed wind 
+    Texp = ((0.031 * omni_data['V1800']) - 4.39)**2
+else:
+    # for the high-speed wind 
+    Texp = ((0.77 * omni_data['V1800']) - 265)**2
+Texp.rename('Texp', inplace=True)
+axs[5].plot(Texp, label='T_{exp}')
+axs[5].set_yscale('log')
+
+axs[6].plot(omni_data['Ratio1800'])
+axs[6].set_ylabel('Na/Np\nratio')
+axs[6].set_yscale('log')
+
+axs[7].plot(omni_data['Beta1800'])
+axs[7].set_ylabel('Plasma\nBeta')
+axs[7].set_yscale('log')
+
+axs[8].plot(omni_data['Mach_num1800'])
+axs[8].set_ylabel('Mach num')
+
+axs[9].plot(omni_data['Mgs_mach_num1800'])
+axs[9].set_ylabel('Magnetonic\nMach num')
+
+axs[10].plot(omni_data['DST1800'])
+axs[10].set_ylabel('Dst (nT)')
+
+for ax in axs:
+    ax.axvline(df['ICME_Datetime'][event], color='green', alpha=0.5, linewidth=2, linestyle='--', label='Real')
+    ax.axvline(tt, color='tomato', alpha=0.5, linewidth=2, linestyle='--', label='G2001')
+    ax.axvline(avg, color='black', alpha=0.5, linewidth=2, linestyle='--', label='PA')
+    ax.legend(loc='upper right', frameon=False, prop={'size': 10})
+    ax.set_xlim([start_datetime, end_datetime])
+    # ax.grid()
+
+plt.xlabel('Date')
+fig.tight_layout()
+plt.show()
+
+# In[]: >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 
+# >>>>>>>>>>>>>>> INDIVIDUAL EVENT >>>>>>>>>>>>>>>>>>>> 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 
+df = read_excel('train_test_final_dataset.xlsx', sheet_name='Filtered')
 
-# sample = read_excel('List_from_Interplanetary shocks lacking type II radio bursts_paper_178_CME-ICME_pairs.xlsx')
+# Create an empty table to be filled with the CME info and its estimated transit time 
+final_table = []
 
-# arrival_datetime = G2001(sample.CME_Datetime[event_num], sample.CME_Speed[event_num])
+# Finalize the output  
+cols = df.columns.insert(df.shape[1]+1, 'PA_trans_time')
+cols = cols.insert(len(cols)+1, 'PA_est_ICME_datetime')
+cols = cols.insert(len(cols)+1, 'ChP_trans_time')
+cols = cols.insert(len(cols)+1, 'ChP_est_ICME_datetime')
 
-# dt = arrival_datetime - sample.CME_Datetime[event_num]
-# print('\nCME launced on:', sample.CME_Datetime[event_num])
-# print('Estimated arrival time is:', arrival_datetime)
-# print('Estimated Transit time is: {} days, {} hours, {} minutes' .format(dt.components.days, 
-#                                                                          dt.components.hours, 
-#                                                                          dt.components.minutes))
-# print('-------------------------------------------------------')
+final_table = DataFrame(columns=cols)
 
-# start_window = arrival_datetime - timedelta(hours=12) # hours=11.04 
-# end_window = arrival_datetime + timedelta(hours=12) # hours=11.04 
+# To prevent plots from showing up for more speed 
+import matplotlib
+matplotlib.use('Agg')
+plt.ioff()
 
+# event = 184
 
+for event in range(len(df)):
 
-# start_datetime = datetime(start_window.year,
-#                           start_window.month,
-#                           start_window.day,
-#                           start_window.hour,
-#                           start_window.minute,
-#                           start_window.second)
-
-# end_datetime = datetime(end_window.year,
-#                         end_window.month,
-#                         end_window.day,
-#                         end_window.hour,
-#                         end_window.minute,
-#                         end_window.second)
-
-
-# event_num = 20
-
-# resolution = 'hourly' # 1-minute' or 'hourly' 
-
-# # start_datetime = datetime(2013, 7, 12)
-# # end_datetime = datetime(2013, 7, 20)
-
-# if resolution == '1-minute':
-#     omni_data = get_omni_min(start_datetime, end_datetime)
-#     # using the 'trendet' package 
-#     arrival_time_trendet = using_trendet_min(omni_data)
+    tt = G2001(df['CME_Datetime'][event], df['CME_Speed'][event])
     
-# elif resolution == 'hourly':
-#     omni_data = get_omni_hr(start_datetime, end_datetime)
+    start_window = tt - timedelta(hours=24) # hours=11.04 
+    end_window = tt + timedelta(hours=24) # hours=11.04 
     
-#     # using the 'parametric approach' 
-#     arrival_time_PA = PA(omni_data, sample, event_num, arrival_datetime)
+    start_datetime = datetime(start_window.year,
+                              start_window.month,
+                              start_window.day,
+                              start_window.hour,
+                              start_window.minute,
+                              start_window.second)
     
-#     # using the 'change-point' method 
-#     arrival_time_ChP = ChP(omni_data, sample, event_num)
+    end_datetime = datetime(end_window.year,
+                            end_window.month,
+                            end_window.day,
+                            end_window.hour,
+                            end_window.minute,
+                            end_window.second)
     
-#     # using the 'trendet' package 
-#     arrival_time_trendet = using_trendet_hr(omni_data)
+    omni_data = get_omni_min(start_datetime, end_datetime)
+    
+    omni_data = omni_data.filter(omni_data[['F', 'BX_GSE', 'BY_GSM', 'BZ_GSM', 'flow_speed', 'proton_density', 'Pressure', 'T', 'NaNp_Ratio', 'Beta', 'Mach_num', 'Mgs_mach_num', 'SYM_H']])
+    omni_data = omni_data.astype('float64')
+    
+    # using 'parametric' approach 
+    avg, pa_tt = PA2_min(omni_data, df['CME_Datetime'][event], tt, -10)
+    
+    # using the 'change-point' method 
+    chp_ICME_est_arrival_time, arrival_time_ChP = ChP_min(omni_data, df['CME_Datetime'][event], event)
+    
+    dt_G2001 = df['ICME_Datetime'][event] - tt
+    
+    print('\nCME launched on:', df['CME_Datetime'][event])
+    print('Real arrival time is:', df['ICME_Datetime'][event])
+    print('G2001 arrival time is:', tt)
+    print('PA arrival time is:', avg)
+    print('G2001 Error is:', 
+          abs(dt_G2001.components.days), 'days,', 
+          abs(dt_G2001.components.hours), 'hours,', 
+          abs(dt_G2001.components.minutes), 'minutes.')
+    
+    if avg == []:
+        print('\nPA didnot find arrival time')
+        dt_PA = "'---"
+    else:
+        dt_PA = df['ICME_Datetime'][event] - avg
+        print('PA Error is:', 
+              abs(dt_PA.components.days), 'days,', 
+              abs(dt_PA.components.hours), 'hours,', 
+              abs(dt_PA.components.minutes), 'minutes.')
+    
+    final_table = final_table.append({'CME_Datetime': df['CME_Datetime'][event], 
+                                  'W': df['W'][event], 
+                                  'CME_Speed': df['CME_Speed'][event], 
+                                  'a': df['a'][event], 
+                                  'MPA': df['MPA'][event], 
+                                  'Lat': df['Lat'][event], 
+                                  'Lon': df['Lon'][event], 
+                                  'Trans_Time': df['Trans_Time'][event], 
+                                  'ICME_Datetime': df['ICME_Datetime'][event], 
+                                  'PA_trans_time': pa_tt, 
+                                  'PA_est_ICME_datetime': avg, 
+                                  'ChP_trans_time': arrival_time_ChP, 
+                                  'ChP_est_ICME_datetime': chp_ICME_est_arrival_time}, 
+                                  ignore_index=True)
+    
+    # fig, axs = plt.subplots(11, 1, figsize=(10,30), dpi=100, sharex=True)
+    
+    # axs[0].plot(omni_data['F'])
+    # axs[0].set_ylabel('B_t (nT)')
+    
+    # axs[1].plot(omni_data['BX_GSE'], label='Bx GSE')
+    # axs[1].plot(omni_data['BY_GSM'], label='By GSM')
+    # axs[1].plot(omni_data['BZ_GSM'], label='Bz GSM')
+    
+    # axs[2].plot(omni_data['flow_speed'])
+    # axs[2].set_ylabel('V (km/s)')
+    
+    # axs[3].plot(omni_data['proton_density'])
+    # axs[3].set_ylabel('n (/cm3)')
+    
+    # axs[4].plot(omni_data['Pressure'])
+    # axs[4].set_ylabel('P (nPa)')
+    
+    # axs[5].plot(omni_data['T'], label='T_P')
+    # # To check this condition Tp/Texp < 0.5 --> signature of ICME (MC) 
+    # if mean(omni_data['flow_speed']) > 500:
+    #     # for the high-speed wind 
+    #     Texp = ((0.031 * omni_data['flow_speed']) - 4.39)**2
+    # else:
+    #     # for the high-speed wind 
+    #     Texp = ((0.77 * omni_data['flow_speed']) - 265)**2
+    # Texp.rename('Texp', inplace=True)
+    # axs[5].plot(Texp, label='T_{exp}')
+    # axs[5].set_yscale('log')
+    
+    # axs[6].plot(omni_data['NaNp_Ratio'])
+    # axs[6].set_ylabel('Na/Np\nratio')
+    # axs[6].set_yscale('log')
+    
+    # axs[7].plot(omni_data['Beta'])
+    # axs[7].set_ylabel('Plasma\nBeta')
+    # axs[7].set_yscale('log')
+    
+    # axs[8].plot(omni_data['Mach_num'])
+    # axs[8].set_ylabel('Mach num')
+    
+    # axs[9].plot(omni_data['Mgs_mach_num'])
+    # axs[9].set_ylabel('Magnetonic\nMach num')
+    
+    # axs[10].plot(omni_data['SYM_H'])
+    # axs[10].set_ylabel('Dst (nT)')
+    
+    # for ax in axs:
+    #     ax.axvline(df['ICME_Datetime'][event], color='green', alpha=0.5, linewidth=2, linestyle='--', label='Real')
+    #     ax.axvline(tt, color='tomato', alpha=0.5, linewidth=2, linestyle='--', label='G2001')
+    #     try:
+    #         ax.axvline(avg, color='black', alpha=0.5, linewidth=2, linestyle='--', label='PA')
+    #     except ValueError as verr:
+    #         print(verr)
+    #     try:
+    #         ax.axvline(chp_ICME_est_arrival_time, color='blue', alpha=0.5, linewidth=2, linestyle='--', label='ChP')
+    #     except ValueError as verr:
+    #         print(verr)
+    #     ax.legend(loc='upper right', frameon=False, prop={'size': 10})
+    #     ax.set_xlim([start_datetime, end_datetime])
+    #     # ax.grid()
+    
+    # plt.xlabel('Date')
+    # fig.tight_layout()
+    # sta = str(start_datetime.year)+str(start_datetime.month)+str(start_datetime.day)+str(start_datetime.hour)+str(start_datetime.minute)+str(start_datetime.second)
+    # end = str(end_datetime.year)+str(end_datetime.month)+str(end_datetime.day)+str(end_datetime.hour)+str(end_datetime.minute)+str(end_datetime.second)
+    # plt.savefig(os.path.join(save_path, 'CME_num_'+str(event)+'_omni_data_for_events_in_paper' + '/', 'OMNI_Data_'+sta+'--'+end+'.png'))
 
+final_table.to_excel(os.path.join(save_path, 'final_table.xlsx'))
 
+# In[]: --- 
+fig, axs = plt.subplots(3, 1, figsize=(15,6), sharex=True)
+axs[0].plot(omni_data['NaNp_Ratio'])
+axs[0].set_ylabel('Na/Np')
 
+omni_data['Na'] = omni_data['NaNp_Ratio'] * omni_data['proton_density']
+axs[1].plot(omni_data['Na'])
+axs[1].set_ylabel('Na')
 
+axs[2].plot(omni_data['proton_density'])
+axs[2].set_ylabel('Np')
 
+for ax in axs:
+    ax.set_yscale('log')
+    ax.set_xlim([start_datetime, end_datetime])
 
+plt.tight_layout()
+plt.show()
 
+# In[]: --- 
+fig, ax1 = plt.subplots(2, 1, figsize=(15,4), sharex=True)
+ax1[0].plot(omni_data['NaNp_Ratio'], 'k-')
 
+ax2 = ax1[1].twinx()
+omni_data['Na'] = omni_data['NaNp_Ratio'] * omni_data['proton_density']
+ax1[1].plot(omni_data['Na'], 'r-')
+ax2.plot(omni_data['proton_density'], 'b-')
 
+ax1[1].set_xlabel('Date')
+ax1[1].set_ylabel('Nalpha', color='r')
+ax2.set_ylabel('Nproton', color='b')
 
+for ax in ax1:
+    ax.set_yscale('log')
+    ax.set_xlim([start_datetime, end_datetime])
 
+plt.tight_layout()
+plt.show()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# In[]: --- 
+omni_data['Na'] = omni_data['NaNp_Ratio'] * omni_data['proton_density']
+fig, ax = plt.subplots(figsize=(15,3))
+ax.plot(omni_data['NaNp_Ratio'], 'k-', label='Na/Np')
+ax.plot(omni_data['Na'], 'r-', label='Na')
+ax.plot(omni_data['proton_density'], 'b-', label='Np')
+ax.set_xlabel('Date')
+ax.set_yscale('log')
+ax.set_xlim([start_datetime, end_datetime])
+plt.legend(loc='best', frameon=False)
+plt.tight_layout()
+plt.show()

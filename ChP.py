@@ -4,10 +4,12 @@ The Dynamic Programming-based Segmentation (DPS) Method
     Change Point (ChP) Detection: Dynamic Programming Search Method 
 Created on Sat Apr  3 18:50:31 2021
 @author: Mohamed Nedal 
-"""
+""" 
+from os.path import join
 import numpy as np
 import ruptures as rpt
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 from pandas import DataFrame, Timestamp
 
 def ChP(omni_data, sample, event_num):
@@ -90,7 +92,7 @@ def ChP(omni_data, sample, event_num):
         
     # Plot the changing-points indices over OMNI variables 
     timestamps_lst = []
-    fig2, axs = plt.subplots(omni_data.shape[1], 1, figsize=(15,12), sharex=True)
+    fig2, axs = plt.subplots(omni_data.shape[1], 1, figsize=(17,10), sharex=True)
     
     # Bt 
     fig1_idx = 0
@@ -101,13 +103,16 @@ def ChP(omni_data, sample, event_num):
     min_idx1 = window1[window1.values==max(window1)].index
     try:
         timestamps_lst.append(min_idx1[0])
-        axs[fig1_idx].axvline(min_idx1.values[0], color='r', linewidth=2, linestyle='--')
+        axs[fig1_idx].axvline(min_idx1.values[0], color='r', linewidth=2, linestyle='--', label='ChP')
     except IndexError as er:
         print(er)
     axs[fig1_idx].plot(omni_data['F1800'])
     axs[fig1_idx].axvspan(st1, et1, facecolor='#FFCC66', alpha=0.5)
     # axs[fig1_idx].axvline(min_idx1.values[0], color='r', linewidth=2, linestyle='--')
-    axs[fig1_idx].set_ylabel(r'$B_{t}$ $(nT)$')
+    # axs[fig1_idx].set_xlabel(fontsize=16)
+    axs[fig1_idx].set_ylabel(r'$B_{t}$ $(nT)$', fontsize=14)
+    axs[fig1_idx].tick_params(labelsize=14)
+    
     
     # Bz 
     fig2_idx = 1
@@ -118,13 +123,14 @@ def ChP(omni_data, sample, event_num):
     min_idx2 = window2[window2.values==min(window2)].index
     try:
         timestamps_lst.append(min_idx2[0])
-        axs[fig2_idx].axvline(min_idx2.values[0], color='r', linewidth=2, linestyle='--')
+        axs[fig2_idx].axvline(min_idx2.values[0], color='r', linewidth=2, linestyle='--', label='ChP')
     except IndexError as er:
         print(er)
     axs[fig2_idx].plot(omni_data['BZ_GSE1800'])
     axs[fig2_idx].axvspan(st2, et2, facecolor='#FFCC66', alpha=0.5)
     # axs[fig2_idx].axvline(min_idx2.values[0], color='r', linewidth=2, linestyle='--')
-    axs[fig2_idx].set_ylabel(r'$B_{z}$ $(nT)$')
+    axs[fig2_idx].set_ylabel(r'$B_{z}$ $(nT)$', fontsize=14)
+    axs[fig2_idx].tick_params(labelsize=14)
     
     # Temp 
     fig3_idx = 2
@@ -136,13 +142,14 @@ def ChP(omni_data, sample, event_num):
     min_idx3 = window3[window3.values==max(window3)].index
     try:
         timestamps_lst.append(min_idx3[0])
-        axs[fig3_idx].axvline(min_idx3.values[0], color='r', linewidth=2, linestyle='--')
+        axs[fig3_idx].axvline(min_idx3.values[0], color='r', linewidth=2, linestyle='--', label='ChP')
     except IndexError as er:
         print(er)
     axs[fig3_idx].plot(omni_data['T1800'])
     axs[fig3_idx].axvspan(st3, et3, facecolor='#FFCC66', alpha=0.5)
     # axs[fig3_idx].axvline(min_idx3.values[0], color='r', linewidth=2, linestyle='--')
-    axs[fig3_idx].set_ylabel(r'$T_{p}$ $(K)$')
+    axs[fig3_idx].set_ylabel(r'$T_{p}$ $(K)$', fontsize=14)
+    axs[fig3_idx].tick_params(labelsize=14)
     
     # Density 
     fig4_idx = 3
@@ -153,13 +160,14 @@ def ChP(omni_data, sample, event_num):
     min_idx4 = window4[window4.values==max(window4)].index
     try:
         timestamps_lst.append(min_idx4[0])
-        axs[fig4_idx].axvline(min_idx4.values[0], color='r', linewidth=2, linestyle='--')
+        axs[fig4_idx].axvline(min_idx4.values[0], color='r', linewidth=2, linestyle='--', label='ChP')
     except IndexError as er:
         print(er)
     axs[fig4_idx].plot(omni_data['N1800'])
     axs[fig4_idx].axvspan(st4, et4, facecolor='#FFCC66', alpha=0.5)
     # axs[fig4_idx].axvline(min_idx4.values[0], color='r', linewidth=2, linestyle='--')
-    axs[fig4_idx].set_ylabel(r'$n_{p}$ $(cm^{-3})$')
+    axs[fig4_idx].set_ylabel(r'$n_{p}$ $(cm^{-3})$', fontsize=14)
+    axs[fig4_idx].tick_params(labelsize=14)
     
     # V 
     fig5_idx = 4
@@ -170,13 +178,14 @@ def ChP(omni_data, sample, event_num):
     min_idx5 = window5[window5.values==max(window5)].index
     try:
         timestamps_lst.append(min_idx5[0])
-        axs[fig5_idx].axvline(min_idx5.values[0], color='r', linewidth=2, linestyle='--')
+        axs[fig5_idx].axvline(min_idx5.values[0], color='r', linewidth=2, linestyle='--', label='ChP')
     except IndexError as er:
         print(er)
     axs[fig5_idx].plot(omni_data['V1800'])
     axs[fig5_idx].axvspan(st5, et5, facecolor='#FFCC66', alpha=0.5)
     # axs[fig5_idx].axvline(min_idx5.values[0], color='r', linewidth=2, linestyle='--')
-    axs[fig5_idx].set_ylabel('$V_{sw}$\n$(km.s^{-1})$')
+    axs[fig5_idx].set_ylabel('$V_{sw}$\n$(km.s^{-1})$', fontsize=14)
+    axs[fig5_idx].tick_params(labelsize=14)
     
     # P 
     fig6_idx = 5
@@ -187,13 +196,14 @@ def ChP(omni_data, sample, event_num):
     min_idx6 = window6[window6.values==max(window6)].index
     try:
         timestamps_lst.append(min_idx6[0])
-        axs[fig6_idx].axvline(min_idx6.values[0], color='r', linewidth=2, linestyle='--')
+        axs[fig6_idx].axvline(min_idx6.values[0], color='r', linewidth=2, linestyle='--', label='ChP')
     except IndexError as er:
         print(er)
     axs[fig6_idx].plot(omni_data['Pressure1800'])
     axs[fig6_idx].axvspan(st6, et6, facecolor='#FFCC66', alpha=0.5)
     # axs[fig6_idx].axvline(min_idx6.values[0], color='r', linewidth=2, linestyle='--')
-    axs[fig6_idx].set_ylabel('P (nPa)')
+    axs[fig6_idx].set_ylabel('P (nPa)', fontsize=14)
+    axs[fig6_idx].tick_params(labelsize=14)
     
     # Dst 
     fig7_idx = 6
@@ -204,12 +214,13 @@ def ChP(omni_data, sample, event_num):
     min_idx7 = window7[window7.values==min(window7)].index
     try:
         timestamps_lst.append(min_idx7[0])
-        axs[fig7_idx].axvline(min_idx7.values[0], color='r', linewidth=2, linestyle='--')
+        axs[fig7_idx].axvline(min_idx7.values[0], color='r', linewidth=2, linestyle='--', label='ChP')
     except IndexError as er:
         print(er)
     axs[fig7_idx].plot(omni_data['DST1800'])
     axs[fig7_idx].axvspan(st7, et7, facecolor='#FFCC66', alpha=0.5)
-    axs[fig7_idx].set_ylabel('Dst (nT)')
+    axs[fig7_idx].set_ylabel('Dst (nT)', fontsize=14)
+    axs[fig7_idx].tick_params(labelsize=14)
     
     # Taking the average of those timestamps 
     timestamps_lst = DataFrame(timestamps_lst, columns={'timestamps'})
@@ -217,15 +228,20 @@ def ChP(omni_data, sample, event_num):
     
     for ax in axs:
         ax.set_xlim([omni_data.index[0], omni_data.index[-1]])
-        ax.axvline(chp_ICME_est_arrival_time, color='k', linewidth=2, linestyle='--')
+        ax.axvline(chp_ICME_est_arrival_time, color='k', linewidth=2, linestyle='--', label='TT')
+        ax.legend(loc='upper right', frameon=False, prop={'size': 14})
     
-    plt.xlabel('Datetime')
+    axs[fig7_idx].set_xlabel('Date', fontsize=14)
+    axs[fig7_idx].tick_params(labelsize=14)
+    
     fig2.tight_layout()
+    axs[fig7_idx].xaxis.set_major_formatter(mdates.DateFormatter('%Y/%m/%d %H:%M'))
     fig2.autofmt_xdate(rotation=45)
-    # plt.savefig(os.path.join(save_path, 'Output_plots' + '/', 'OMNI_for_CME_'+str(event_num)+'.png'), dpi=300)
+    save_path = 'D:/Study/Academic/Research/Master Degree/Master Work/Software/Codes/Python/Heliopy Examples/auto_examples_python/'
+    plt.savefig(join(save_path, 'OMNI_for_CME_'+str(event_num)+'.png'), dpi=300)
     plt.show()
     
-    plt.close(fig2)
+    # plt.close(fig2)
     
     # Calculate the time delta between the CME and the ICME 
     est_tran_time_chp_method = chp_ICME_est_arrival_time - sample.CME_Datetime[event_num]

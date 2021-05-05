@@ -8,11 +8,12 @@ OMNI provides interspersed data from various spacecrafts.
 
 """
 # import numpy as np
+import os
 from pandas import read_excel, DataFrame
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 import os.path
-from necessary_functions import G2001, get_omni_hr, get_omni_min, using_trendet_hr, using_trendet_min, PA, PA2_min, ChP, ChP_min
+from necessary_functions import G2001, get_omni_hr, get_omni_min, using_trendet_min, PA, PA2_min, ChP, ChP_min
 from statistics import mean
 # Print out the data directory path and their sizes 
 from heliopy.data import helper as heliohelper
@@ -24,7 +25,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 # In[]: Establishing the output folder 
-save_path = 'D:/Study/Academic/Research/Master Degree/Master Work/Software/Codes/Python/Heliopy Examples/auto_examples_python/'
+save_path = os.path.dirname(os.path.abspath('CME_ICME_Match.py'))
 try: os.mkdir(save_path + 'Output_plots')
 except OSError as error: print(error)
 try: os.mkdir(save_path + 'omni_data_for_events_in_paper')
@@ -99,9 +100,7 @@ for event_num in range(len(sample)):
     # Example 
     # start_datetime = datetime(2017, 9, 7)
     # end_datetime = datetime(2017, 9, 14)
-    
     omni_data = get_omni_hr(start_datetime, end_datetime)
-    
     # ------------------------------------------------------ 
     
     # using the 'parametric approach' 
@@ -517,74 +516,6 @@ for event in range(len(df)):
                                   'ChP_trans_time': arrival_time_ChP, 
                                   'ChP_est_ICME_datetime': chp_ICME_est_arrival_time}, 
                                   ignore_index=True)
-    
-    # fig, axs = plt.subplots(11, 1, figsize=(10,30), dpi=100, sharex=True)
-    
-    # axs[0].plot(omni_data['F'])
-    # axs[0].set_ylabel('B_t (nT)')
-    
-    # axs[1].plot(omni_data['BX_GSE'], label='Bx GSE')
-    # axs[1].plot(omni_data['BY_GSM'], label='By GSM')
-    # axs[1].plot(omni_data['BZ_GSM'], label='Bz GSM')
-    
-    # axs[2].plot(omni_data['flow_speed'])
-    # axs[2].set_ylabel('V (km/s)')
-    
-    # axs[3].plot(omni_data['proton_density'])
-    # axs[3].set_ylabel('n (/cm3)')
-    
-    # axs[4].plot(omni_data['Pressure'])
-    # axs[4].set_ylabel('P (nPa)')
-    
-    # axs[5].plot(omni_data['T'], label='T_P')
-    # # To check this condition Tp/Texp < 0.5 --> signature of ICME (MC) 
-    # if mean(omni_data['flow_speed']) > 500:
-    #     # for the high-speed wind 
-    #     Texp = ((0.031 * omni_data['flow_speed']) - 4.39)**2
-    # else:
-    #     # for the high-speed wind 
-    #     Texp = ((0.77 * omni_data['flow_speed']) - 265)**2
-    # Texp.rename('Texp', inplace=True)
-    # axs[5].plot(Texp, label='T_{exp}')
-    # axs[5].set_yscale('log')
-    
-    # axs[6].plot(omni_data['NaNp_Ratio'])
-    # axs[6].set_ylabel('Na/Np\nratio')
-    # axs[6].set_yscale('log')
-    
-    # axs[7].plot(omni_data['Beta'])
-    # axs[7].set_ylabel('Plasma\nBeta')
-    # axs[7].set_yscale('log')
-    
-    # axs[8].plot(omni_data['Mach_num'])
-    # axs[8].set_ylabel('Mach num')
-    
-    # axs[9].plot(omni_data['Mgs_mach_num'])
-    # axs[9].set_ylabel('Magnetonic\nMach num')
-    
-    # axs[10].plot(omni_data['SYM_H'])
-    # axs[10].set_ylabel('Dst (nT)')
-    
-    # for ax in axs:
-    #     ax.axvline(df['ICME_Datetime'][event], color='green', alpha=0.5, linewidth=2, linestyle='--', label='Real')
-    #     ax.axvline(tt, color='tomato', alpha=0.5, linewidth=2, linestyle='--', label='G2001')
-    #     try:
-    #         ax.axvline(avg, color='black', alpha=0.5, linewidth=2, linestyle='--', label='PA')
-    #     except ValueError as verr:
-    #         print(verr)
-    #     try:
-    #         ax.axvline(chp_ICME_est_arrival_time, color='blue', alpha=0.5, linewidth=2, linestyle='--', label='ChP')
-    #     except ValueError as verr:
-    #         print(verr)
-    #     ax.legend(loc='upper right', frameon=False, prop={'size': 10})
-    #     ax.set_xlim([start_datetime, end_datetime])
-    #     # ax.grid()
-    
-    # plt.xlabel('Date')
-    # fig.tight_layout()
-    # sta = str(start_datetime.year)+str(start_datetime.month)+str(start_datetime.day)+str(start_datetime.hour)+str(start_datetime.minute)+str(start_datetime.second)
-    # end = str(end_datetime.year)+str(end_datetime.month)+str(end_datetime.day)+str(end_datetime.hour)+str(end_datetime.minute)+str(end_datetime.second)
-    # plt.savefig(os.path.join(save_path, 'CME_num_'+str(event)+'_omni_data_for_events_in_paper' + '/', 'OMNI_Data_'+sta+'--'+end+'.png'))
 
 final_table.to_excel(os.path.join(save_path, 'final_table.xlsx'))
 

@@ -1,13 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Plotting OMNI Data
-=================== 
-
-Importing and plotting data from OMNI Web Interface.
-OMNI provides interspersed data from various spacecrafts.
+Run the snippets one-by-one 
 
 """
-# import numpy as np
 import os
 from pandas import read_excel, DataFrame
 from datetime import datetime, timedelta
@@ -18,7 +13,6 @@ from statistics import mean
 # Print out the data directory path and their sizes 
 from heliopy.data import helper as heliohelper
 heliohelper.listdata()
-# import ruptures as rpt
 from sklearn.metrics import mean_squared_error
 from math import sqrt
 import warnings
@@ -62,7 +56,7 @@ cols = cols.insert(len(cols)+1, 'trendet_est_ICME_datetime')
 
 final_table = DataFrame(columns=cols)
 
-# To prevent plots from showing up for more speed 
+# Uncomment this part to prevent plots from showing up for more speed 
 # import matplotlib
 # matplotlib.use('Agg')
 # plt.ioff()

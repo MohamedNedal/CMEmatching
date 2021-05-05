@@ -13,7 +13,6 @@ from datetime import timedelta
 import heliopy.data.omni as omni
 import trendet
 import seaborn as sns
-# from datetime import datetime
 from pandas import DataFrame
 import matplotlib.pyplot as plt
 
@@ -906,15 +905,5 @@ def ChP(omni_data, sample, event_num):
     
     
     return chp_ICME_est_arrival_time, est_tran_time_chp_method
-
-
-
-
-
-
-
-
-
-
 
 
